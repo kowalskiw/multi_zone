@@ -1,1 +1,1 @@
-Running OZone analyses with AAMKS' data
+OZone analyses with AAMKS' data
