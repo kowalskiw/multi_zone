@@ -1,0 +1,459 @@
+Revision
+	- liczba303/302 ???
+Name
+	- nazwa symulacji 
+	- typ geometrii podłogi
+    - typ geometrii dachu (Double/	
+		- wysokość pomieszczenia
+		- głębokość pomieszczenia
+		- szerokość pomieszczenia
+		- wysokość sufitu ('0' przy 'flat roof')
+	- nazwa materiału warstwy 1 ściany 1
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 2 ściany 1
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 3 ściany 1
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 4 ściany 1
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 1 ściany 2
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 2 ściany 2
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 3 ściany 2
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 4 ściany 2
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 1 ściany 3
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 2 ściany 3
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 3 ściany 3
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 4 ściany 3
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 1 ściany 4
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 2 ściany 4
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 3 ściany 4
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 4 ściany 4
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 1 sufitu
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 2 sufitu
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 3 sufitu
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 4 sufitu
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 1 podłogi
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 2 podłogi
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 3 podłogi
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+    - nazwa materiału warstwy 4 podłogi
+		- grubość
+		- gęstość
+		- przewodność
+		- ciepło właściwe
+		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - zimna powierzchnia
+	- wysokość, na której zaczyna się otwór 1 w ścianie 1      /Otwory/
+        - wysokość, na której kończy się otwór 1 w ścianie 1	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 2 w ścianie 1
+        - wysokość, na której kończy się otwór 2 w ścianie 1	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 3 w ścianie 1
+        - wysokość, na której kończy się otwór 3 w ścianie 1	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 1 w ścianie 2
+        - wysokość, na której kończy się otwór 1 w ścianie 2	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 2 w ścianie 2
+        - wysokość, na której kończy się otwór 2 w ścianie 2	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 3 w ścianie 2
+        - wysokość, na której kończy się otwór 3 w ścianie 2	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 1 w ścianie 3
+        - wysokość, na której kończy się otwór 1 w ścianie 3	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 2 w ścianie 3
+        - wysokość, na której kończy się otwór 2 w ścianie 3	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 3 w ścianie 3
+        - wysokość, na której kończy się otwór 3 w ścianie 3	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 1 w ścianie 4
+        - wysokość, na której kończy się otwór 1 w ścianie 4	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 2 w ścianie 4
+        - wysokość, na której kończy się otwór 2 w ścianie 4	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+    - wysokość, na której zaczyna się otwór 3 w ścianie 4
+        - wysokość, na której kończy się otwór 3 w ścianie 4	
+        - szerokść otworu
+        - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+        - adiabatyczność (0/1)
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+'0' ???	
+'0' ???
+'0' ???
+'0' ???
+'0' ???
+'0' ???	
+- ilość grup otworów w suficie o takiej samej średnicy
+- średnica otworów grupy 1 w suficie
+    - liczba otworów 
+	- sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+- średnica otworów grupy 2 w suficie
+    - liczba otworów 
+	- sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+- średnica otworów grupy 3 w suficie
+    - liczba otworów 
+	- sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
+- ilość wentylatorów           /Wentylacja/
+    - wysokość, na której umieszczono wentylator 1
+    - wysokość, na której umieszczono wentylator 2	
+    - wysokość, na której umieszczono wentylator 3
+    - średnica wentylatora 1
+	- średnica wentylatora 2
+    - średnica wentylatora 3
+    - wydajność wentylatora 1 [m3/s]
+    - wydajność wentylatora 2 [m3/s]
+    - wydajność wentylatora 3 [m3/s]
+    - kierunek przepływu wentylatora 1 (in/out)
+	- kierunek przepływu wentylatora 2 (in/out)
+    - kierunek przepływu wentylatora 3 (in/out)
+    '0' ???
+	- stoichometric coefficient
+	- wysokość paliwa -
+/Pożar/ - rodzaj pożaru (eurokod, zlokalizowany, użytkownika)
+		- powierzchnia
+		- wysokość pożaru
+		- czy definiuję powierzchnię pożaru (0/1)
+		- czy definiuję zarówno RHR i mf (0/-1)
+		- czy definiuję tylko RHR (0/-1)
+		- czy definiuję tylko mf (0/-1)
+		'17.5' ???
+		- współczynnik efektywności spalania
+		- model spalania (0 brak, 1 external flaming, 2 extended fire duration)
+		'19' ???
+		tabela krzywej rozwoju pożaru, dla poszczególnych rekordów:
+			- czas
+			- moc
+			- wypływ masy
+			- powierzchnia pożaru
+			
+     /dynamiczna ilość wierszy dostosowuje się do ilości rekordów
+     słowa kluczowe Strategy, Parameters etc. rozdzielają sekcje o zmiennej długości/
+     
+			
+			
+			
+			
+
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+	
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+	
+			
+Strategy
+	- strategia (1 mieszany, 2 dwustrefowy, 3 jednostrefowy)
+		- minimalna temperatura górnej warstwy /dla zmiany modelu/
+		- temperatura samozapłonu gorących gazów
+		- wysokość dolnej warstwy (ułamek wysokości pomieszczenia)
+		- powierzchnia pożaru (ułamek powierzchni podłogi)
+Parameters
+	- temperatura początkowa [K]
+	- ciśnienie początkowe [Pa]
+	- ułamek promieniowania przez zamknięte otwory
+	- współczynnik konwekcji zimnej powierzchni [W/m2K]
+	- współczynnik konwekcji gorącej powierzchni [W/m2K]
+	- czas trwania symulacji [s]
+	- krok czasowy zapisywania wyniku [s]
+	- krok czasowy obliczeń [s]
+	- współczynnik Bernoulliego
+	- czynnik bezpieczeństwa
+		- temperatura [stopnie C]     /tabela temperatura otwarcie krokowe/
+		- procent otwarcia [%]
+		- temperatura [stopnie C]
+		- procent otwarcia [%]
+		- temperatura [stopnie C]
+		- procent otwarcia [%]
+		- temperatura [stopnie C]     /tabela temperatura otwarcie liniowe/
+		- procent otwarcia [%]
+		- temperatura [stopnie C]
+		- procent otwarcia [%]
+		- temperatura [stopnie C]
+		- procent otwarcia [%]
+		- czas [s]                    /tabela otwarcie czasowe/
+		- procent otwarcia [%]
+		- czas [s]
+		- procent otwarcia [%]
+Steel       /Element/
+	- zabezpieczenie (Protected/Unprotected)
+	- czy z katalogu (Catalogue/???)
+	- typ profilu (pozycja w katalogu)
+	- profil (pozycja w katalogu)
+	- ekspozycja (4 sides, 3 sides)
+Contour /zabezpieczenie/
+	- czy z katalogu
+	- pozycja w katalogu
+
+	'0' ???
+	- rodzaj krzywej ogrzewania (Hot temperatura gazów, ISO, ASTME, Hydrocarbon)
+
+
+
+	'0' ???
+	'0' ???
+    '0' ???
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
