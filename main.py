@@ -1,17 +1,31 @@
-from os import listdir, getcwd
+from os import listdir, getcwd, chdir
 
 
 class CreateOZN:
     def __init__(self):
+        chdir('config')
         self.files = listdir(getcwd())
         self.title = self.files[0].split('.')[0]
         self.ozone_path = 'C:\Program Files (x86)\OZone 3'
 
     def write_ozn(self):
+        tab_new = []
         with open(self.title + '.ozn', 'w') as ozn_file:
-            ozn_file.writelines(['Revision', 302, 'Name', self.title])
-            [ozn_file.writelines(i) for i in [self.geom(), self.material, self.openings(), self.ceiling(),
-                                              self.smoke_extractors(), self.fire(), self.strategy(), self.profile()]]
+            ozn_file.writelines(['Revision\n', '302\n', 'Name\n', self.title + '\n'])
+            tab_new.extend(self.geom())
+            tab_new.extend(self.material())
+            tab_new.extend(self.openings())
+            tab_new.extend(self.ceiling())
+            tab_new.extend(self.smoke_extractors())
+            tab_new.extend(self.fire())
+            tab_new.extend(self.strategy())
+            tab_new.extend(self.profile())
+
+            # shorter code below do not working, why?
+            # [tab_new.extend(i) for i in [self.geom(), self.material, self.openings(), self.ceiling(),
+            #                                   self.smoke_extractors(), self.fire(), self.strategy(), self.profile()]]
+
+            ozn_file.writelines(tab_new)
 
     def geom(self):
         with open(self.files[1], 'r') as file:
@@ -26,10 +40,13 @@ class CreateOZN:
             my_mat = file.readlines()
 
         for j in my_mat:
-            tab_new.append(j)
-            for i in ozone_mat[21:97]:
-                if i.split(' = ')[0] == j:
-                    tab_new.append(i.split(' = ')[1])
+            if j == '\n':
+                [tab_new.append('\n') for i in range(7)]
+            else:
+                tab_new.extend([j.split(':')[0] + '\n', j.split(':')[1]])
+                for i in ozone_mat[21:97]:
+                    if i.split(' = ')[0] == j.split(':')[0]:
+                        tab_new.append(i.split(' = ')[1])
 
         return tab_new
 
@@ -38,7 +55,7 @@ class CreateOZN:
         with open(self.files[2], 'r') as file:
             holes = file.readlines()
         for i in range(4):              # for each wall
-            if holes[0] == i +1:        # check if there's a hole in the wall
+            if holes[0] == i + 1:        # check if there's a hole in the wall
                 holes.pop(0)
                 [tab_new.append(holes.pop(0)) for i in range(5)]    # add hole properties
             else:
@@ -48,39 +65,39 @@ class CreateOZN:
 
     def ceiling(self):
 
-        pass
+        return []
 
     def smoke_extractors(self):
         tab_new = []
         with open(self.files[0], 'r') as file:
             ext = file.readlines()
 
-        pass
+        return []
 
     def fire(self):
         tab_new = []
         with open(self.files[6], 'r') as file:
             fire = file.readlines()
 
-        pass
+        return []
 
     def strategy(self):
 
-        pass
+        return []
 
     def parameters(self):
         tab_new = []
         with open(self.files[4], 'r') as file:
             param = file.readlines()
 
-        pass
+        return []
 
     def profile(self):
         tab_new = []
         with open(self.files[5], 'r') as file:
             fire = file.readlines()
 
-        pass
+        return []
 
 
 """"running simulation and importing results"""
@@ -99,4 +116,4 @@ class ExpSQL:
 
 if __name__ == '__main__':
 
-    CreateOZN()
+    CreateOZN().write_ozn()
