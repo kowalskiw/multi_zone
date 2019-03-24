@@ -1,12 +1,13 @@
 from os import listdir, getcwd, chdir
 import json as js
+import subprocess
 
 
 class CreateOZN:
     def __init__(self):
         chdir('config')
         self.files = listdir(getcwd())
-        print(self.files)
+        # print(self.files)
         self.title = self.files[0].split('.')[0]
         self.ozone_path = 'C:\Program Files (x86)\OZone 3'
 
@@ -79,8 +80,6 @@ class CreateOZN:
             ceil = file.readlines()
         tab_new.extend(ceil)
         [tab_new.append('\n') for i in range((3 - int(ceil[0]))*3)]
-
-        print(tab_new)
         return tab_new
 
     def smoke_extractors(self):
@@ -141,38 +140,37 @@ class CreateOZN:
             prof_dict = {}
             keys = []
             values = []
-            for l in ozone_prof:
+            for l in ozone_prof[3:]:
                 if l[0] == 'D':
                     keys.append(l.split()[1])
-                    prof_dict.update({keys[-1]: values})
-                    values.clear()
+                    values = []
                 elif l != '\n':
                     values.append(l.split('  ')[0])
+                else:
+                    prof_dict.update({keys[-1]: values})
 
-            print(prof_dict.keys())     # issue! how to choose proper key index and value index according to value only
-            print(prof_dict.values())
-            for k, v in prof_dict.items():
-                print(k, v)
-            tab_new.append(str(list(prof_dict.keys()).index(prof[3][:-1])) + '\n')
+            for t, p in prof_dict.items():
+                try:
+                    tab_new.extend([str(list(prof_dict.keys()).index(t)) + '\n', str(p.index(prof[3][:-1])) + '\n'])
+                except:
+                    pass
 
             tab_new.extend(prof[5:])
-
-
-
-
-
-
-
-
-
-        return []
+        return tab_new
 
 
 """"running simulation and importing results"""
 
 
 class RunSim:
-    pass
+    def __init__(self):
+        self.ozone_path = 'C:\Program Files (x86)\OZone 3'
+        self.sim_path = 'D:\CR\01_zadania\01_konstrukcje\dlagita'
+        self.sim_name = 'test190309.ozn'
+
+    def run_simulation(self):
+        chdir(self.ozone_path)
+        subprocess.run('OZone.exe ' + self.sim_path + self.sim_name)
 
 
 """exporting simulation result to SQLite database and making chart"""
@@ -185,3 +183,4 @@ class ExpSQL:
 if __name__ == '__main__':
 
     CreateOZN().write_ozn()
+    RunSim().run_simulation()
