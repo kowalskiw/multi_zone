@@ -1,6 +1,9 @@
 from os import listdir, getcwd, chdir
 import json as js
-import subprocess
+import subprocess as sbp
+from pynput.keyboard import Key, Controller
+import time
+import matplotlib.pyplot as pp
 
 
 class CreateOZN:
@@ -25,9 +28,9 @@ class CreateOZN:
         tab_new.extend(self.strategy())
         tab_new.extend(self.parameters())
         tab_new.extend(self.profile())
-        chdir('..')
+        chdir('D:\ozone_results')
         with open(self.title + '.ozn', 'w') as ozn_file:
-            ozn_file.writelines(['Revision\n', '302\n', 'Name\n', self.title + '\n'])
+            ozn_file.writelines(['Revision\n', '304\n', 'Name\n', self.title + '\n'])
 
 
             # shorter code below do not working, why?
@@ -35,6 +38,7 @@ class CreateOZN:
             #                                   self.smoke_extractors(), self.fire(), self.strategy(), self.profile()]]
 
             ozn_file.writelines(tab_new)
+            print('OZone simulation file (.ozn) has been written!')
 
     def geom(self):
         with open(self.files[2], 'r') as file:
@@ -110,8 +114,8 @@ class CreateOZN:
         tab_new = []
         with open(self.files[8], 'r') as file:
             fire = file.readlines()
-        tab_new.extend(fire[:8])
-        for line in fire[8:]:
+        tab_new.extend(fire[:10])
+        for line in fire[10:]:
             time = round(float(line.split()[0])/60, ndigits=2)   # it may be done easier way
             hrr = round(float(line.split()[1]), ndigits=2)
             tab_new.extend([str(time) + '\n', str(hrr) + '\n'])
@@ -155,28 +159,89 @@ class CreateOZN:
                 except:
                     pass
 
-            tab_new.extend(prof[5:])
+            tab_new.extend(prof[4:])
         return tab_new
 
 
-""""running simulation and importing results"""
+""""running simulation"""
 
 
 class RunSim:
     def __init__(self):
         self.ozone_path = 'C:\Program Files (x86)\OZone 3'
-        self.sim_path = 'D:\CR\01_zadania\01_konstrukcje\dlagita'
-        self.sim_name = 'test190309.ozn'
+        self.sim_path = 'D:\s09'
+        self.sim_name = 's09.ozn'
 
     def run_simulation(self):
-        chdir(self.ozone_path)
-        subprocess.run('OZone.exe ' + self.sim_path + self.sim_name)
+        sim_path = 'D:\ozone_results'
+
+        sbp.Popen('C:\Program Files (x86)\OZone 3\OZone.exe')
+        keys = Controller()
+        time.sleep(0.5)
+        keys.press(Key.enter)
+        time.sleep(5)
+
+        with keys.pressed(Key.ctrl):
+            keys.press('o')
+        time.sleep(1)
+        keys.type(sim_path + '\s190330.ozn')
+        keys.press(Key.enter)
+
+        time.sleep(4)
+        for i in range(2):
+            keys.press(Key.tab)
+            time.sleep(1)
+        keys.press(Key.enter)
+
+        time.sleep(2)
+        keys.press(Key.tab)
+        time.sleep(1)
+        keys.press(Key.enter)
+
+        time.sleep(1)
+        with keys.pressed(Key.alt):
+            keys.press(Key.f4)
 
 
 """exporting simulation result to SQLite database and making chart"""
 
 
+class Charting:
+    def __init__(self):
+        self.coords = []
+
+    def add_data(self):
+        with open('D:\ozone_results\s190330.stt', 'r') as file:
+            stt = file.readlines()
+        for i in stt[2:]:
+            self.coords.append((float(i.split()[0]), float(i.split()[2])))
+        print(self.coords)
+
+    def plot(self):
+        self.add_data()
+        fig, axes = pp.subplots()
+        x, y = zip(*self.coords)
+        new_x = list(x)
+        new_y = list(y)
+
+        print('max temperatur:  ', max(*new_y), '°C at ', new_x[new_y.index(max(*new_y))], 's')
+        pp.axis([0, max(*new_x)*1.1, 0, max(*new_y)*1.1])
+        axes.set(xlabel='time [s]', ylabel='temperature (°C)', title='Steel temperature')
+        axes.plot(new_x, new_y, 'ro-')
+        axes.grid()
+        chdir('D:\ozone_results')
+        fig.savefig("stt.png")
+        pp.show()
+
+
 class ExpSQL:
+    pass
+
+
+"""calculating critical temperature according to ~współczynnik wykorzystania nośności~"""
+
+
+class TempCrit:
     pass
 
 
@@ -184,3 +249,4 @@ if __name__ == '__main__':
 
     CreateOZN().write_ozn()
     RunSim().run_simulation()
+    Charting().plot()
