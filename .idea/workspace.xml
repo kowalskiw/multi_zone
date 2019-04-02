@@ -2,13 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/s190330.udf" beforeDir="false" afterPath="$PROJECT_DIR$/config/s190330.udf" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/rob.py" beforeDir="false" afterPath="$PROJECT_DIR$/rob.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test190309.flx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/test190309.ozn" beforeDir="false" afterPath="$PROJECT_DIR$/test190309.ozn" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -21,8 +16,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="103">
-              <caret line="231" column="25" lean-forward="true" selection-start-line="231" selection-start-column="25" selection-end-line="231" selection-end-column="25" />
+            <state relative-caret-position="251">
+              <caret line="253" lean-forward="true" selection-start-line="253" selection-end-line="253" />
               <folding>
                 <element signature="e#0#37#0" expanded="true" />
                 <element signature="e#341#5756#0" />
@@ -66,7 +61,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
+  <component name="ProjectFrameBounds" extendedState="7">
     <option name="x" value="192" />
     <option name="y" value="16" />
     <option name="width" value="697" />
@@ -187,11 +182,19 @@
       <option name="project" value="LOCAL" />
       <updated>1553962135432</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Looping simulations - works">
+      <created>1554228694687</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1554228694687</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
+    <frame x="-8" y="-8" width="1382" height="744" extended-state="7" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.09821428" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -261,7 +264,8 @@
     <MESSAGE value="changed for localised fire with 'maximum' heating&#10;almost every function works" />
     <MESSAGE value="CreateOZN class complete, RunsSim class in progress" />
     <MESSAGE value="RunSim, Charting works - time.sleep differences issue" />
-    <option name="LAST_COMMIT_MESSAGE" value="RunSim, Charting works - time.sleep differences issue" />
+    <MESSAGE value="Looping simulations - works" />
+    <option name="LAST_COMMIT_MESSAGE" value="Looping simulations - works" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -300,8 +304,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="103">
-          <caret line="231" column="25" lean-forward="true" selection-start-line="231" selection-start-column="25" selection-end-line="231" selection-end-column="25" />
+        <state relative-caret-position="251">
+          <caret line="253" lean-forward="true" selection-start-line="253" selection-end-line="253" />
           <folding>
             <element signature="e#0#37#0" expanded="true" />
             <element signature="e#341#5756#0" />
