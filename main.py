@@ -3,12 +3,15 @@ import json as js
 import subprocess as sbp
 from pynput.keyboard import Key, Controller
 import time
-import matplotlib.pyplot as pp
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from mpl_toolkits.mplot3d import axes3d, Axes3D
+import numpy as np
 
 
 class CreateOZN:
     def __init__(self):
-        chdir('config')
+        # chdir('config')
         self.files = listdir(getcwd())
         # print(self.files)
         self.title = self.files[0].split('.')[0]
@@ -29,6 +32,7 @@ class CreateOZN:
         tab_new.extend(self.parameters())
         tab_new.extend(self.profile())
         chdir('D:\ozone_results')
+        print('collecting data finished')
         with open(self.title + '.ozn', 'w') as ozn_file:
             ozn_file.writelines(['Revision\n', '304\n', 'Name\n', self.title + '\n'])
 
@@ -169,38 +173,47 @@ class CreateOZN:
 class RunSim:
     def __init__(self):
         self.ozone_path = 'C:\Program Files (x86)\OZone 3'
-        self.sim_path = 'D:\s09'
-        self.sim_name = 's09.ozn'
+        self.sim_path = 'D:\ozone_results'
+        self.sim_name = '\s190330.ozn'
+        self.keys = Controller()
 
-    def run_simulation(self):
-        sim_path = 'D:\ozone_results'
-
+    def open_ozone(self):
         sbp.Popen('C:\Program Files (x86)\OZone 3\OZone.exe')
-        keys = Controller()
         time.sleep(0.5)
-        keys.press(Key.enter)
-        time.sleep(5)
+        self.keys.press(Key.right)
+        self.keys.press(Key.enter)
+        time.sleep(6)
+        [self.keys.press(Key.tab) for i in range(3)]
+        print('OZone3 is running')
 
+    def close_ozn(self):
+        time.sleep(1)
+        with self.keys.pressed(Key.alt):
+            self.keys.press(Key.f4)
+
+    def run_simulation(self, single=True):
+        keys = self.keys
+        # open .ozn file
         with keys.pressed(Key.ctrl):
             keys.press('o')
         time.sleep(1)
-        keys.type(sim_path + '\s190330.ozn')
+        keys.type(self.sim_path + self.sim_name)
         keys.press(Key.enter)
-
-        time.sleep(4)
-        for i in range(2):
-            keys.press(Key.tab)
-            time.sleep(1)
+        time.sleep(7)
+        # run "thermal action"
+        [(keys.press(Key.tab), time.sleep(0.1)) for i in range(7)]   #
         keys.press(Key.enter)
-
-        time.sleep(2)
+        time.sleep(3)
+        # run "steel temperature"
         keys.press(Key.tab)
         time.sleep(1)
         keys.press(Key.enter)
+        keys.press(Key.tab)
 
-        time.sleep(1)
-        with keys.pressed(Key.alt):
-            keys.press(Key.f4)
+        print('analises has been ran')
+
+        if single:
+            self.close_ozn()
 
 
 """exporting simulation result to SQLite database and making chart"""
@@ -208,30 +221,93 @@ class RunSim:
 
 class Charting:
     def __init__(self):
+        self.config_path = 'D:\CR\_zadania\_konstrukcje\dlagita\config'
         self.coords = []
+        self.results = []
 
     def add_data(self):
+        self.coords = []
         with open('D:\ozone_results\s190330.stt', 'r') as file:
             stt = file.readlines()
         for i in stt[2:]:
             self.coords.append((float(i.split()[0]), float(i.split()[2])))
-        print(self.coords)
 
-    def plot(self):
+    def plot_single(self):
         self.add_data()
-        fig, axes = pp.subplots()
+        fig, axes = plt.subplots()
         x, y = zip(*self.coords)
         new_x = list(x)
         new_y = list(y)
 
         print('max temperatur:  ', max(*new_y), '°C at ', new_x[new_y.index(max(*new_y))], 's')
-        pp.axis([0, max(*new_x)*1.1, 0, max(*new_y)*1.1])
+        plt.axis([0, max(*new_x)*1.1, 0, max(*new_y)*1.1])
         axes.set(xlabel='time [s]', ylabel='temperature (°C)', title='Steel temperature')
         axes.plot(new_x, new_y, 'ro-')
         axes.grid()
         chdir('D:\ozone_results')
         fig.savefig("stt.png")
-        pp.show()
+        plt.show()
+
+    def choose_max(self):
+        self.add_data()
+        time, temp = zip(*self.coords)
+
+        return float(max(temp))
+
+    def get_results(self):
+        RunSim().open_ozone()
+        for x in range(-8, 13, 2):
+            for y in range(-10, 11, 2):
+                chdir(self.config_path)
+                print(getcwd())
+                with open(listdir(getcwd())[8], 'r') as file:
+                    fire = file.readlines()
+                fire[4] = '2\n'
+                fire[7] = str(x) + '\n'
+                fire[8] = str(y) + '\n'
+                with open(listdir(getcwd())[8], 'w') as file:
+                    file.writelines(fire)
+                CreateOZN().write_ozn()
+                RunSim().run_simulation(single=False)
+                time.sleep(1)
+                self.results.append((x, y, self.choose_max()))
+                print(self.results[len(self.results)-1])
+        RunSim().close_ozn()
+        print(self.results)
+
+    def max3d(self):
+        self.get_results()
+
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        x, y, z = zip(*self.results)
+
+        dim_x = list(x).count(x[0])
+        dim_y = list(y).count(y[0])
+        X = []
+        Y = []
+        Z = []
+
+        for i in range(dim_y):
+            X.append(list(x[i * dim_x:(i + 1) * dim_x]))
+        for i in range(dim_y):
+            Y.append(list(y[i * dim_x:(i + 1) * dim_x]))
+        [Z.append(list(z)[i * dim_x:(i + 1) * dim_x]) for i in range(dim_y)]
+
+        ax.scatter(np.array(X), np.array(Y), np.array(Z), cmap=cm.coolwarm,
+                   linewidth=0, antialiased=False)
+
+        xAxisLine = ((min(x), max(x)), (0, 0), (max(z), max(z)))
+        ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'black')
+        yAxisLine = ((0, 0), (min(y), max(y)), (max(z), max(z)))
+        ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'black')
+
+        ax.set_xlabel("X - fire")
+        ax.set_ylabel("Y - fire")
+        ax.set_zlabel("max temperature")
+        ax.set_title("maximum temperature while fire axes are changing")
+
+        plt.show()
 
 
 class ExpSQL:
@@ -247,6 +323,6 @@ class TempCrit:
 
 if __name__ == '__main__':
 
-    CreateOZN().write_ozn()
-    RunSim().run_simulation()
-    Charting().plot()
+    # CreateOZN().write_ozn()
+    # RunSim().run_simulation()
+    Charting().max3d()
