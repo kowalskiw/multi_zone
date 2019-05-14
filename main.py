@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 import numpy as np
+import sqlite3 as sql
 
 
 class CreateOZN:
@@ -182,7 +183,7 @@ class RunSim:
         time.sleep(0.5)
         self.keys.press(Key.right)
         self.keys.press(Key.enter)
-        time.sleep(6)
+        time.sleep(5)
         [self.keys.press(Key.tab) for i in range(3)]
         print('OZone3 is running')
 
@@ -193,24 +194,27 @@ class RunSim:
 
     def run_simulation(self, single=True):
         keys = self.keys
+
         # open .ozn file
         with keys.pressed(Key.ctrl):
             keys.press('o')
         time.sleep(1)
         keys.type(self.sim_path + self.sim_name)
         keys.press(Key.enter)
-        time.sleep(7)
+        time.sleep(5)
+
         # run "thermal action"
         [(keys.press(Key.tab), time.sleep(0.1)) for i in range(7)]   #
         keys.press(Key.enter)
-        time.sleep(3)
+        time.sleep(2)
+
         # run "steel temperature"
         keys.press(Key.tab)
         time.sleep(1)
         keys.press(Key.enter)
         keys.press(Key.tab)
 
-        print('analises has been ran')
+        print('analises has been run')
 
         if single:
             self.close_ozn()
@@ -222,20 +226,20 @@ class RunSim:
 class Charting:
     def __init__(self):
         self.config_path = 'D:\CR\_zadania\_konstrukcje\dlagita\config'
-        self.coords = []
+        self.steel_temp = []
         self.results = []
 
     def add_data(self):
-        self.coords = []
+        self.steel_temp = []
         with open('D:\ozone_results\s190330.stt', 'r') as file:
             stt = file.readlines()
         for i in stt[2:]:
-            self.coords.append((float(i.split()[0]), float(i.split()[2])))
+            self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
 
     def plot_single(self):
         self.add_data()
         fig, axes = plt.subplots()
-        x, y = zip(*self.coords)
+        x, y = zip(*self.steel_temp)
         new_x = list(x)
         new_y = list(y)
 
@@ -250,31 +254,53 @@ class Charting:
 
     def choose_max(self):
         self.add_data()
-        time, temp = zip(*self.coords)
+        time, temp = zip(*self.steel_temp)
 
         return float(max(temp))
 
+    def choose_crit(self):
+        coef = 0.8
+        self.add_data()
+        time, temp = zip(*self.steel_temp)
+
+        print(self.steel_temp)
+        for i in temp:
+            if int(i) >= temp_crit(coef):
+                return time[temp.index(i)]
+        return 0
+
+    # !!!this is main loop for stochastic analyses!!!
     def get_results(self):
         RunSim().open_ozone()
-        for x in range(-8, 13, 2):
-            for y in range(-10, 11, 2):
+
+        # inside loop you have to declare differences between every analysis and boundary conditions
+        for i1 in range(0, 81, 1):
+            for i2 in range(0, 1, 2):
                 chdir(self.config_path)
                 print(getcwd())
                 with open(listdir(getcwd())[8], 'r') as file:
                     fire = file.readlines()
-                fire[4] = '2\n'
-                fire[7] = str(x) + '\n'
-                fire[8] = str(y) + '\n'
+                fire[3] = str(i1/10) + '\n'
                 with open(listdir(getcwd())[8], 'w') as file:
                     file.writelines(fire)
                 CreateOZN().write_ozn()
                 RunSim().run_simulation(single=False)
                 time.sleep(1)
-                self.results.append((x, y, self.choose_max()))
-                print(self.results[len(self.results)-1])
-        RunSim().close_ozn()
-        print(self.results)
 
+                # writing results to table
+                self.results.append((i1/10, self.choose_max()))
+                print(self.results[len(self.results)-1])
+
+        # safe closing code:
+        RunSim().close_ozn()
+
+        # what about writing results into file? --> expSQL class
+        print(self.results)
+        return self.results
+        # ExpSQL().save_in_db(self.results)
+
+
+    # making chart -> every way you want to
     def max3d(self):
         self.get_results()
 
@@ -309,20 +335,72 @@ class Charting:
 
         plt.show()
 
+    def prob_charts(self, sql_tab):
+        probs = []
+        times = []
+        repetitions = len(sql_tab)
+        while len(sql_tab) > 0:
+            i = sql_tab[0]
+            probs.append(sql_tab.count(i)/repetitions)
+            times.append(i)
+            while i in sql_tab:
+                sql_tab.remove(i)
+
+        print(times)
+        print(probs)
+        plt.scatter(times, probs)
+        plt.show()
+
+
+    # aim of test 1 is to check how cross-section temperature is changing along column
+    def test1_charts(self):
+        res_tab = self.get_results()
+        z, temp = zip(*res_tab)
+        plt.scatter(z, temp)
+        plt.xlabel('height')
+        plt.ylabel('temperature')
+        plt.grid(True)
+        plt.show()
+
+
 
 class ExpSQL:
-    pass
+    def __init__(self):
+        with open('results.db', 'w'):
+            pass
+        self.conn = sql.connect('results.db')
+
+    def save_in_db(self, res_tab):
+        c = self.conn
+        c.execute('''CREATE TABLE results_ozone(id INT PRIMARY KEY, time_crit real)''')
+        i_count = 0
+        for i in res_tab:
+            c.execute("INSERT INTO results_ozone VALUES ({}, {})".format(i_count, i))
+            i_count += 1
+        self.conn.commit()
+        # self.conn.close()
+        print('data properly saved')
+        Charting().prob_charts((self.get_data()))
+
+    def get_data(self):
+        c = self.conn.cursor()
+        c.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
+        c.execute("SELECT * FROM results_ozone")
+        trash, crit_times = zip(*c.fetchall())
+        print(list(crit_times))
+
+        return list(crit_times)
 
 
-"""calculating critical temperature according to ~współczynnik wykorzystania nośności~"""
+"""calculating critical temperature according to equation from Eurocode 3"""
 
 
-class TempCrit:
-    pass
+def temp_crit(coef):
+    return 39.19 * np.log(1 / 0.9674 / coef ** 3.833 - 1) + 482
 
 
 if __name__ == '__main__':
 
-    # CreateOZN().write_ozn()
-    # RunSim().run_simulation()
-    Charting().max3d()
+    # Charting().get_results()
+    # ExpSQL().save_in_db([0, 900.0, 840.0, 900.0, 0, 840.0, 540.0, 540.0, 780.0, 840.0, 840.0])
+    Charting().test1_charts()
