@@ -5,7 +5,7 @@ from pynput.keyboard import Key, Controller
 import time
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from mpl_toolkits.mplot3d import axes3d, Axes3D
+from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sqlite3 as sql
 
@@ -49,7 +49,11 @@ class CreateOZN:
         with open(self.files[2], 'r') as file:
             geom_tab = file.readlines()
 
-        return geom_tab
+        return geom_tab[:6]
+
+    def elements_place(self):
+        with open(self.files[9], 'r') as file:
+            return dict(js.load(file))
 
     def material(self):
         tab_new = []
@@ -116,6 +120,7 @@ class CreateOZN:
         #         mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
         #         area = round(max_area*hrr/max_hrr, ndigits=2)
         #         tab_new.extend([str(time) + '\n', str(hrr) + '\n', str(mass_flux) + '\n', str(area) + '\n'])
+
         tab_new = []
         with open(self.files[8], 'r') as file:
             fire = file.readlines()
@@ -125,7 +130,40 @@ class CreateOZN:
             hrr = round(float(line.split()[1]), ndigits=2)
             tab_new.extend([str(time) + '\n', str(hrr) + '\n'])
 
+        x, y, z = self.fire_place(float(fire[7][:-1]), float(fire[8][:-1]), float(fire[6][:-1]), self.elements_place())
+
+        tab_new[7] = str(x) + '\n'
+        tab_new[8] = str(y) + '\n'
+        if z:
+            tab_new[3] = str(z) + '\n'
+
         return tab_new
+
+    # sets fire in regard to the nearest element
+    def fire_place(self, xf, yf, f_d, elements):
+        def nearest(src, tab):                          # BUGBUGBUG
+            delta = 0
+            for k in tab:
+                i = float(k) - src
+                if 1/abs(i) > delta:
+                    delta = 1/i
+                else:
+                    return -1/delta
+            return -1/delta
+
+        dy = nearest(yf, elements.keys())
+        dx = nearest(xf, elements[str(yf - dy)])
+        print(xf, yf, dx, dy, yf - dy, xf - dx)
+        print('Diameter: ', f_d, 'Distance from element: ', 2*(dx*dx + dy*dy)**0.5)
+
+
+        if f_d > 2*(dx*dx + dy*dy)**0.5:
+            print('there is a column considered')
+            return dx, dy, 0
+        else:
+            print('there is a beam considered')
+            return 0, dy, False
+
 
     def strategy(self):
         with open(self.files[7], 'r') as file:
@@ -201,12 +239,12 @@ class RunSim:
         time.sleep(1)
         keys.type(self.sim_path + self.sim_name)
         keys.press(Key.enter)
-        time.sleep(5)
+        time.sleep(4)
 
         # run "thermal action"
-        [(keys.press(Key.tab), time.sleep(0.1)) for i in range(7)]   #
+        [(keys.press(Key.tab), time.sleep(0.1)) for i in range(7)]
         keys.press(Key.enter)
-        time.sleep(2)
+        time.sleep(3)
 
         # run "steel temperature"
         keys.press(Key.tab)
@@ -223,7 +261,7 @@ class RunSim:
 """exporting simulation result to SQLite database and making chart"""
 
 
-class Charting:
+class Main:
     def __init__(self):
         self.config_path = 'D:\CR\_zadania\_konstrukcje\dlagita\config'
         self.steel_temp = []
@@ -235,22 +273,6 @@ class Charting:
             stt = file.readlines()
         for i in stt[2:]:
             self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
-
-    def plot_single(self):
-        self.add_data()
-        fig, axes = plt.subplots()
-        x, y = zip(*self.steel_temp)
-        new_x = list(x)
-        new_y = list(y)
-
-        print('max temperatur:  ', max(*new_y), '°C at ', new_x[new_y.index(max(*new_y))], 's')
-        plt.axis([0, max(*new_x)*1.1, 0, max(*new_y)*1.1])
-        axes.set(xlabel='time [s]', ylabel='temperature (°C)', title='Steel temperature')
-        axes.plot(new_x, new_y, 'ro-')
-        axes.grid()
-        chdir('D:\ozone_results')
-        fig.savefig("stt.png")
-        plt.show()
 
     def choose_max(self):
         self.add_data()
@@ -269,40 +291,92 @@ class Charting:
                 return time[temp.index(i)]
         return 0
 
-    # !!!this is main loop for stochastic analyses!!!
-    def get_results(self):
+    def get_results(self, n_sampl):
+        # randomize of fire location (x, y) and fire diameter
+        fires = []
+        chdir(self.config_path)
+        for i in range(n_sampl):
+            fires.append(random_fire(*[CreateOZN().geom()[3:5][i][:-1] for i in range(2)], 10))
+
         RunSim().open_ozone()
 
-        # inside loop you have to declare differences between every analysis and boundary conditions
-        for i1 in range(0, 81, 1):
-            for i2 in range(0, 1, 2):
-                chdir(self.config_path)
-                print(getcwd())
-                with open(listdir(getcwd())[8], 'r') as file:
-                    fire = file.readlines()
-                fire[3] = str(i1/10) + '\n'
-                with open(listdir(getcwd())[8], 'w') as file:
-                    file.writelines(fire)
-                CreateOZN().write_ozn()
-                RunSim().run_simulation(single=False)
-                time.sleep(1)
+    # !!!this is main loop for stochastic analyses!!!
+    # inside loop you have to declare differences between every analysis and boundary conditions
+        for props in fires:
+            chdir(self.config_path)
+            with open(listdir(getcwd())[8], 'r') as file:
+                fire = file.readlines()
 
-                # writing results to table
-                self.results.append((i1/10, self.choose_max()))
-                print(self.results[len(self.results)-1])
+            fire[6] = str(props[0]) + '\n'
+            fire[7] = str(props[1]) + '\n'
+            fire[8] = str(props[2]) + '\n'
+
+            with open(listdir(getcwd())[8], 'w') as file:
+                file.writelines(fire)
+
+            CreateOZN().write_ozn()
+
+            RunSim().run_simulation(single=False)
+            time.sleep(1)
+
+            # writing results to table
+            self.results.append((self.choose_max(), self.choose_crit(),))
+            print(self.results[len(self.results) - 1])
+
+
+
+        # for i1 in range(0, 81, 4):
+        #     for i2 in range(0, 1, 2):
+        #         chdir(self.config_path)
+        #         print(getcwd())
+        #         with open(listdir(getcwd())[8], 'r') as file:
+        #             fire = file.readlines()
+        #         fire[3] = str(i1/10) + '\n'
+        #         with open(listdir(getcwd())[8], 'w') as file:
+        #             file.writelines(fire)
+        #         CreateOZN().write_ozn()
+        #         RunSim().run_simulation(single=False)
+        #         time.sleep(1)
+        #
+        #         # writing results to table
+        #         self.results.append((self.choose_max(), self.choose_crit(),))
+        #         print(self.results[len(self.results)-1])
 
         # safe closing code:
         RunSim().close_ozn()
 
-        # what about writing results into file? --> expSQL class
-        print(self.results)
+        # add headers to results table columns
+        self.results.insert(0, ('Max Temp', 'Critical time'))
+        self.results.insert(1, ('[°C]', '[min]'))
+
+        export_results(self.results)
+
         return self.results
-        # ExpSQL().save_in_db(self.results)
 
 
-    # making chart -> every way you want to
+class Charting:
+    def __init__(self, results_tab):
+        self.config_path = 'D:\CR\_zadania\_konstrukcje\dlagita\config'
+        self.results = results_tab
+
+    # def plot_single(self):
+    #     # fix func to new architecture
+    #     fig, axes = plt.subplots()
+    #     # x, y = zip(*steel_temp)
+    #     new_x = list(x)
+    #     new_y = list(y)
+    #
+    #     print('max temperatur:  ', max(*new_y), '°C at ', new_x[new_y.index(max(*new_y))], 's')
+    #     plt.axis([0, max(*new_x)*1.1, 0, max(*new_y)*1.1])
+    #     axes.set(xlabel='time [s]', ylabel='temperature (°C)', title='Steel temperature')
+    #     axes.plot(new_x, new_y, 'ro-')
+    #     axes.grid()
+    #     chdir('D:\ozone_results')
+    #     fig.savefig("stt.png")
+    #     plt.show()
+
     def max3d(self):
-        self.get_results()
+        # fix func to new architecture
 
         fig = plt.figure()
         ax = Axes3D(fig)
@@ -351,17 +425,15 @@ class Charting:
         plt.scatter(times, probs)
         plt.show()
 
-
     # aim of test 1 is to check how cross-section temperature is changing along column
     def test1_charts(self):
-        res_tab = self.get_results()
-        z, temp = zip(*res_tab)
+        # fix func to new architecture
+        z, temp = zip(*self.results)
         plt.scatter(z, temp)
         plt.xlabel('height')
         plt.ylabel('temperature')
         plt.grid(True)
         plt.show()
-
 
 
 class ExpSQL:
@@ -392,6 +464,19 @@ class ExpSQL:
         return list(crit_times)
 
 
+def export_results(results_tab):
+    writelist = []
+    for i in results_tab:
+        if len(writelist) < 2:
+            writelist.append('{},{},{}\n'.format('', i[0], i[1]))
+        else:
+            writelist.append('{},{},{}\n'.format(len(writelist) - 2, i[0], i[1]))
+
+    with open('stoch_res.csv', 'w') as file:
+        file.writelines(writelist)
+    print('results written to CSV file')
+
+
 """calculating critical temperature according to equation from Eurocode 3"""
 
 
@@ -399,8 +484,17 @@ def temp_crit(coef):
     return 39.19 * np.log(1 / 0.9674 / coef ** 3.833 - 1) + 482
 
 
+def random_fire(xmax, ymax, dmax):
+    fire = []
+
+    for i in [dmax, xmax, ymax]:
+        fire.append(np.random.randint(0, (float(i))))
+    while fire[0] == 0:
+        fire[0] = (np.random.randint(0, (float(dmax))))
+
+    return fire
+
+
 if __name__ == '__main__':
 
-    # Charting().get_results()
-    # ExpSQL().save_in_db([0, 900.0, 840.0, 900.0, 0, 840.0, 540.0, 540.0, 780.0, 840.0, 840.0])
-    Charting().test1_charts()
+    Main().get_results(3)
