@@ -141,21 +141,22 @@ class CreateOZN:
 
     # sets fire in regard to the nearest element
     def fire_place(self, xf, yf, f_d, elements):
-        def nearest(src, tab):                          # BUGBUGBUG
+        def nearest(src, tab):
             delta = 0
             for k in tab:
-                i = float(k) - src
-                if 1/abs(i) > delta:
-                    delta = 1/i
+                dist = float(k) - src
+                if abs(1 / dist) > abs(delta):
+                    delta = 1/dist
                 else:
-                    return -1/delta
-            return -1/delta
+                    return 1/delta
+            return 1/delta
 
         dy = nearest(yf, elements.keys())
-        dx = nearest(xf, elements[str(yf - dy)])
-        print(xf, yf, dx, dy, yf - dy, xf - dx)
-        print('Diameter: ', f_d, 'Distance from element: ', 2*(dx*dx + dy*dy)**0.5)
+        print('Yf', yf, 'dY', dy, 'chosenY: ', yf + dy)
+        dx = nearest(xf, elements[str(round(yf + dy, 1))])
 
+        print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
+        print('Diameter: ', f_d, 'Doubled distance from element: ', 2*(dx*dx + dy*dy)**0.5)
 
         if f_d > 2*(dx*dx + dy*dy)**0.5:
             print('there is a column considered')
@@ -296,7 +297,7 @@ class Main:
         fires = []
         chdir(self.config_path)
         for i in range(n_sampl):
-            fires.append(random_fire(*[CreateOZN().geom()[3:5][i][:-1] for i in range(2)], 10))
+            fires.append(random_fire(*[CreateOZN().geom()[3:5][i][:-1] for i in range(2)], 20))
 
         RunSim().open_ozone()
 
@@ -488,9 +489,9 @@ def random_fire(xmax, ymax, dmax):
     fire = []
 
     for i in [dmax, xmax, ymax]:
-        fire.append(np.random.randint(0, (float(i))))
+        fire.append(np.random.randint(0, int(10 * float(i)))/10)
     while fire[0] == 0:
-        fire[0] = (np.random.randint(0, (float(dmax))))
+        fire[0] = np.random.randint(0, int(10 * float(dmax)))/10
 
     return fire
 

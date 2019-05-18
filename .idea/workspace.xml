@@ -17,16 +17,20 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="253">
-              <caret line="470" column="51" selection-start-line="470" selection-start-column="51" selection-end-line="470" selection-end-column="51" />
+            <state relative-caret-position="233">
+              <caret line="496" selection-start-line="496" selection-end-line="496" />
               <folding>
-                <element signature="e#6898#8179#0" />
-                <element signature="e#8274#12650#0" />
-                <element signature="e#11442#11466#0" />
-                <element signature="e#10840#11916#0" />
-                <element signature="e#11962#12330#0" />
-                <element signature="e#12456#12650#0" />
-                <element signature="e#12672#13531#0" />
+                <element signature="e#3431#3462#0" />
+                <element signature="e#5806#5903#0" />
+                <element signature="e#5939#6036#0" />
+                <element signature="e#6069#6986#0" />
+                <element signature="e#7035#8312#0" />
+                <element signature="e#8583#8807#0" />
+                <element signature="e#8843#8934#0" />
+                <element signature="e#11392#13996#0" />
+                <element signature="e#14017#14876#0" />
+                <element signature="e#14916#15271#0" />
+                <element signature="e#15378#15437#0" />
               </folding>
             </state>
           </provider>
@@ -36,7 +40,7 @@
         <entry file="file://$PROJECT_DIR$/rob.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="136">
-              <caret line="61" lean-forward="true" selection-start-line="61" selection-end-line="61" />
+              <caret line="61" selection-start-line="61" selection-end-line="61" />
               <folding>
                 <element signature="e#0#39#0" expanded="true" />
                 <element signature="e#134#5411#0" />
@@ -52,7 +56,6 @@
     <findStrings>
       <find>fire</find>
       <find>sbp</find>
-      <find>print</find>
       <find>coords</find>
       <find>sim_name</find>
       <find>ran</find>
@@ -64,6 +67,18 @@
       <find>fire()</find>
       <find>ABS</find>
       <find>abs</find>
+      <find>nea</find>
+      <find>bug</find>
+      <find>print</find>
+      <find>dy</find>
+      <find>*[</find>
+      <find>random_fi</find>
+      <find>random</find>
+      <find>fire_place</find>
+      <find>near</find>
+      <find>get</find>
+      <find>fire(se</find>
+      <find>write</find>
     </findStrings>
     <replaceStrings>
       <replace>steel_temp</replace>
@@ -215,7 +230,14 @@
       <option name="project" value="LOCAL" />
       <updated>1557849600891</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Architecture changed, prepared for multisimulation, bug with nearest func">
+      <created>1558023167984</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1558023167984</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -230,7 +252,7 @@
       <window_info id="DB Browser" order="5" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.34042552" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.23404256" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.36006546" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -292,7 +314,8 @@
     <MESSAGE value="RunSim, Charting works - time.sleep differences issue" />
     <MESSAGE value="Looping simulations - works" />
     <MESSAGE value="Some charts added, saving results in sqlite DB - in progress" />
-    <option name="LAST_COMMIT_MESSAGE" value="Some charts added, saving results in sqlite DB - in progress" />
+    <MESSAGE value="Architecture changed, prepared for multisimulation, bug with nearest func" />
+    <option name="LAST_COMMIT_MESSAGE" value="Architecture changed, prepared for multisimulation, bug with nearest func" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -301,61 +324,40 @@
           <url>file://$PROJECT_DIR$/rob.py</url>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>298</line>
-          <option name="timeStamp" value="8" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>143</line>
-          <option name="timeStamp" value="11" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>156</line>
-          <option name="timeStamp" value="13" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>274</line>
-          <option name="timeStamp" value="15" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>471</line>
-          <option name="timeStamp" value="17" />
-        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
     <entry file="file://C:/Python37/Lib/site-packages/matplotlib/axis.py" />
     <entry file="file://$USER_HOME$/AppData/Local/Temp/surface3d_demo.py" />
-    <entry file="file://$PROJECT_DIR$/rob.py">
+    <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="136">
-          <caret line="61" lean-forward="true" selection-start-line="61" selection-end-line="61" />
+        <state relative-caret-position="233">
+          <caret line="496" selection-start-line="496" selection-end-line="496" />
           <folding>
-            <element signature="e#0#39#0" expanded="true" />
-            <element signature="e#134#5411#0" />
-            <element signature="e#5429#5524#0" />
+            <element signature="e#3431#3462#0" />
+            <element signature="e#5806#5903#0" />
+            <element signature="e#5939#6036#0" />
+            <element signature="e#6069#6986#0" />
+            <element signature="e#7035#8312#0" />
+            <element signature="e#8583#8807#0" />
+            <element signature="e#8843#8934#0" />
+            <element signature="e#11392#13996#0" />
+            <element signature="e#14017#14876#0" />
+            <element signature="e#14916#15271#0" />
+            <element signature="e#15378#15437#0" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.py">
+    <entry file="file://$PROJECT_DIR$/rob.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="253">
-          <caret line="470" column="51" selection-start-line="470" selection-start-column="51" selection-end-line="470" selection-end-column="51" />
+        <state relative-caret-position="136">
+          <caret line="61" selection-start-line="61" selection-end-line="61" />
           <folding>
-            <element signature="e#6898#8179#0" />
-            <element signature="e#8274#12650#0" />
-            <element signature="e#11442#11466#0" />
-            <element signature="e#10840#11916#0" />
-            <element signature="e#11962#12330#0" />
-            <element signature="e#12456#12650#0" />
-            <element signature="e#12672#13531#0" />
+            <element signature="e#0#39#0" expanded="true" />
+            <element signature="e#134#5411#0" />
+            <element signature="e#5429#5524#0" />
           </folding>
         </state>
       </provider>
