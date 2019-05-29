@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="">
+    <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="class Export added and modified,">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/s190330.udf" beforeDir="false" afterPath="$PROJECT_DIR$/config/s190330.udf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/results.db" beforeDir="false" afterPath="$PROJECT_DIR$/results.db" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,20 +18,24 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="233">
-              <caret line="496" selection-start-line="496" selection-end-line="496" />
+            <state relative-caret-position="240">
+              <caret line="487" column="10" lean-forward="true" selection-start-line="487" selection-start-column="10" selection-end-line="487" selection-end-column="40" />
               <folding>
+                <element signature="e#299#7046#0" />
+                <element signature="e#1707#1814#0" />
+                <element signature="e#1854#1931#0" />
+                <element signature="e#1965#2518#0" />
+                <element signature="e#2552#2971#0" />
+                <element signature="e#3004#3219#0" />
+                <element signature="e#3261#3401#0" />
                 <element signature="e#3431#3462#0" />
-                <element signature="e#5806#5903#0" />
-                <element signature="e#5939#6036#0" />
-                <element signature="e#6069#6986#0" />
-                <element signature="e#7035#8312#0" />
-                <element signature="e#8583#8807#0" />
-                <element signature="e#8843#8934#0" />
-                <element signature="e#11392#13996#0" />
-                <element signature="e#14017#14876#0" />
-                <element signature="e#14916#15271#0" />
-                <element signature="e#15378#15437#0" />
+                <element signature="e#4975#5832#0" />
+                <element signature="e#5866#5963#0" />
+                <element signature="e#5999#6096#0" />
+                <element signature="e#6129#7046#0" />
+                <element signature="e#7616#7706#0" />
+                <element signature="e#10700#13304#0" />
+                <element signature="e#13718#14893#0" />
               </folding>
             </state>
           </provider>
@@ -79,6 +84,11 @@
       <find>get</find>
       <find>fire(se</find>
       <find>write</find>
+      <find>neares</find>
+      <find>get_res</find>
+      <find>self.ozone_path</find>
+      <find>path</find>
+      <find>:1</find>
     </findStrings>
     <replaceStrings>
       <replace>steel_temp</replace>
@@ -96,7 +106,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-7" />
+    <option name="x" value="-8" />
+    <option name="y" value="-8" />
     <option name="width" value="697" />
     <option name="height" value="735" />
   </component>
@@ -180,8 +191,8 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="Python.rob" />
       <item itemvalue="Python.main" />
+      <item itemvalue="Python.rob" />
     </list>
   </component>
   <component name="SvnConfiguration">
@@ -237,7 +248,14 @@
       <option name="project" value="LOCAL" />
       <updated>1558023167984</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="nearest func bugs fixed, rounding added, few first runs unstable - to be fixed">
+      <created>1558183073980</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1558183073980</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -252,14 +270,14 @@
       <window_info id="DB Browser" order="5" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.23404256" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.33387887" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.36006546" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="Console" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" />
-      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" weight="0.3289689" />
       <window_info anchor="bottom" id="Version Control" order="10" weight="0.2405892" />
       <window_info anchor="bottom" id="Python Console" order="11" />
       <window_info anchor="bottom" id="DB Execution Console" order="12" />
@@ -315,7 +333,8 @@
     <MESSAGE value="Looping simulations - works" />
     <MESSAGE value="Some charts added, saving results in sqlite DB - in progress" />
     <MESSAGE value="Architecture changed, prepared for multisimulation, bug with nearest func" />
-    <option name="LAST_COMMIT_MESSAGE" value="Architecture changed, prepared for multisimulation, bug with nearest func" />
+    <MESSAGE value="nearest func bugs fixed, rounding added, few first runs unstable - to be fixed" />
+    <option name="LAST_COMMIT_MESSAGE" value="nearest func bugs fixed, rounding added, few first runs unstable - to be fixed" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -324,28 +343,45 @@
           <url>file://$PROJECT_DIR$/rob.py</url>
           <option name="timeStamp" value="1" />
         </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>221</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>241</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
     <entry file="file://C:/Python37/Lib/site-packages/matplotlib/axis.py" />
     <entry file="file://$USER_HOME$/AppData/Local/Temp/surface3d_demo.py" />
+    <entry file="file://$USER_HOME$/PycharmProjects/wakacje/cam_log.py">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="233">
-          <caret line="496" selection-start-line="496" selection-end-line="496" />
+        <state relative-caret-position="240">
+          <caret line="487" column="10" lean-forward="true" selection-start-line="487" selection-start-column="10" selection-end-line="487" selection-end-column="40" />
           <folding>
+            <element signature="e#299#7046#0" />
+            <element signature="e#1707#1814#0" />
+            <element signature="e#1854#1931#0" />
+            <element signature="e#1965#2518#0" />
+            <element signature="e#2552#2971#0" />
+            <element signature="e#3004#3219#0" />
+            <element signature="e#3261#3401#0" />
             <element signature="e#3431#3462#0" />
-            <element signature="e#5806#5903#0" />
-            <element signature="e#5939#6036#0" />
-            <element signature="e#6069#6986#0" />
-            <element signature="e#7035#8312#0" />
-            <element signature="e#8583#8807#0" />
-            <element signature="e#8843#8934#0" />
-            <element signature="e#11392#13996#0" />
-            <element signature="e#14017#14876#0" />
-            <element signature="e#14916#15271#0" />
-            <element signature="e#15378#15437#0" />
+            <element signature="e#4975#5832#0" />
+            <element signature="e#5866#5963#0" />
+            <element signature="e#5999#6096#0" />
+            <element signature="e#6129#7046#0" />
+            <element signature="e#7616#7706#0" />
+            <element signature="e#10700#13304#0" />
+            <element signature="e#13718#14893#0" />
           </folding>
         </state>
       </provider>

@@ -11,12 +11,11 @@ import sqlite3 as sql
 
 
 class CreateOZN:
-    def __init__(self):
-        # chdir('config')
+    def __init__(self, ozone_path, results_path):
         self.files = listdir(getcwd())
-        # print(self.files)
         self.title = self.files[0].split('.')[0]
-        self.ozone_path = 'C:\Program Files (x86)\OZone 3'
+        self.ozone_path = ozone_path
+        self.results_path = results_path
 
     def write_ozn(self):
         tab_new = []
@@ -32,7 +31,7 @@ class CreateOZN:
         tab_new.extend(self.strategy())
         tab_new.extend(self.parameters())
         tab_new.extend(self.profile())
-        chdir('D:\ozone_results')
+        chdir(self.results_path)
         print('collecting data finished')
         with open(self.title + '.ozn', 'w') as ozn_file:
             ozn_file.writelines(['Revision\n', '304\n', 'Name\n', self.title + '\n'])
@@ -145,7 +144,9 @@ class CreateOZN:
             delta = 0
             for k in tab:
                 dist = float(k) - src
-                if abs(1 / dist) > abs(delta):
+                if dist == 0:
+                    return 0
+                elif abs(1 / dist) > abs(delta):
                     delta = 1/dist
                 else:
                     return 1/delta
@@ -164,7 +165,6 @@ class CreateOZN:
         else:
             print('there is a beam considered')
             return 0, dy, False
-
 
     def strategy(self):
         with open(self.files[7], 'r') as file:
@@ -211,14 +211,14 @@ class CreateOZN:
 
 
 class RunSim:
-    def __init__(self):
-        self.ozone_path = 'C:\Program Files (x86)\OZone 3'
-        self.sim_path = 'D:\ozone_results'
-        self.sim_name = '\s190330.ozn'
+    def __init__(self, ozone_path, results_path, sim_name):
+        self.ozone_path = ozone_path
+        # self.sim_path = results_path
+        self.sim_path = results_path + '\ '[0] + sim_name + '.ozn'
         self.keys = Controller()
 
     def open_ozone(self):
-        sbp.Popen('C:\Program Files (x86)\OZone 3\OZone.exe')
+        sbp.Popen(self.ozone_path + '\OZone.exe')
         time.sleep(0.5)
         self.keys.press(Key.right)
         self.keys.press(Key.enter)
@@ -231,14 +231,14 @@ class RunSim:
         with self.keys.pressed(Key.alt):
             self.keys.press(Key.f4)
 
-    def run_simulation(self, single=True):
+    def run_simulation(self):
         keys = self.keys
 
         # open .ozn file
         with keys.pressed(Key.ctrl):
             keys.press('o')
         time.sleep(1)
-        keys.type(self.sim_path + self.sim_name)
+        keys.type(self.sim_path)
         keys.press(Key.enter)
         time.sleep(4)
 
@@ -255,22 +255,19 @@ class RunSim:
 
         print('analises has been run')
 
-        if single:
-            self.close_ozn()
 
-
-"""exporting simulation result to SQLite database and making chart"""
+"""main class contains main  loop and results operations"""
 
 
 class Main:
-    def __init__(self):
-        self.config_path = 'D:\CR\_zadania\_konstrukcje\dlagita\config'
+    def __init__(self, ozone_path, results_path, config_path, sim_name):
+        self.paths = [ozone_path, results_path, config_path, sim_name]
         self.steel_temp = []
         self.results = []
 
     def add_data(self):
         self.steel_temp = []
-        with open('D:\ozone_results\s190330.stt', 'r') as file:
+        with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:
             stt = file.readlines()
         for i in stt[2:]:
             self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
@@ -295,16 +292,16 @@ class Main:
     def get_results(self, n_sampl):
         # randomize of fire location (x, y) and fire diameter
         fires = []
-        chdir(self.config_path)
+        chdir(self.paths[2])
         for i in range(n_sampl):
-            fires.append(random_fire(*[CreateOZN().geom()[3:5][i][:-1] for i in range(2)], 20))
+            fires.append(random_fire(*[CreateOZN(*self.paths[:2]).geom()[3:5][i][:-1] for i in range(2)], 20))
 
-        RunSim().open_ozone()
+        RunSim(*self.paths[:2], self.paths[3]).open_ozone()
 
-    # !!!this is main loop for stochastic analyses!!!
-    # inside loop you have to declare differences between every analysis and boundary conditions
+        # !!!this is main loop for stochastic analyses!!!
+        # inside loop you have to declare differences between every analysis and boundary conditions
         for props in fires:
-            chdir(self.config_path)
+            chdir(self.paths[2])
             with open(listdir(getcwd())[8], 'r') as file:
                 fire = file.readlines()
 
@@ -315,44 +312,27 @@ class Main:
             with open(listdir(getcwd())[8], 'w') as file:
                 file.writelines(fire)
 
-            CreateOZN().write_ozn()
+            CreateOZN(*self.paths[:2]).write_ozn()
 
-            RunSim().run_simulation(single=False)
+            RunSim(*self.paths[:2], self.paths[3]).run_simulation()
             time.sleep(1)
 
             # writing results to table
             self.results.append((self.choose_max(), self.choose_crit(),))
             print(self.results[len(self.results) - 1])
 
-
-
-        # for i1 in range(0, 81, 4):
-        #     for i2 in range(0, 1, 2):
-        #         chdir(self.config_path)
-        #         print(getcwd())
-        #         with open(listdir(getcwd())[8], 'r') as file:
-        #             fire = file.readlines()
-        #         fire[3] = str(i1/10) + '\n'
-        #         with open(listdir(getcwd())[8], 'w') as file:
-        #             file.writelines(fire)
-        #         CreateOZN().write_ozn()
-        #         RunSim().run_simulation(single=False)
-        #         time.sleep(1)
-        #
-        #         # writing results to table
-        #         self.results.append((self.choose_max(), self.choose_crit(),))
-        #         print(self.results[len(self.results)-1])
-
         # safe closing code:
-        RunSim().close_ozn()
+        RunSim(*self.paths[:2], self.paths[3]).close_ozn()
 
         # add headers to results table columns
-        self.results.insert(0, ('Max Temp', 'Critical time'))
-        self.results.insert(1, ('[°C]', '[min]'))
+        self.results.insert(0, ('MaxTemp_C_degree', 'CriticalTime_min'))
 
-        export_results(self.results)
+        # exporting results
+        Export(self.results).csv_write()
+        # Export(self.results).sql_write()
 
-        return self.results
+
+'''making charts - there is a need to do little tiding'''
 
 
 class Charting:
@@ -437,45 +417,47 @@ class Charting:
         plt.show()
 
 
-class ExpSQL:
-    def __init__(self):
-        with open('results.db', 'w'):
+'''exporting results to SQLite database'''
+
+
+class Export:
+    def __init__(self, results):
+        self.res_tab = results
+
+    def __sql_connect(self):
+        with open('results.db', 'w') as file:
+            file.write('')
             pass
-        self.conn = sql.connect('results.db')
+        return sql.connect('results.db')
 
-    def save_in_db(self, res_tab):
-        c = self.conn
-        c.execute('''CREATE TABLE results_ozone(id INT PRIMARY KEY, time_crit real)''')
-        i_count = 0
-        for i in res_tab:
-            c.execute("INSERT INTO results_ozone VALUES ({}, {})".format(i_count, i))
-            i_count += 1
-        self.conn.commit()
-        # self.conn.close()
-        print('data properly saved')
-        Charting().prob_charts((self.get_data()))
+    def sql_write(self):
+        conn = self.__sql_connect()
 
-    def get_data(self):
-        c = self.conn.cursor()
-        c.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
-        c.execute("SELECT * FROM results_ozone")
-        trash, crit_times = zip(*c.fetchall())
-        print(list(crit_times))
+        conn.execute("CREATE TABLE results_ozone({} real, {} real)".format(*self.res_tab[0]))
+        for i in self.res_tab:
+            conn.execute("INSERT INTO results_ozone VALUES (?, ?)", i)
 
-        return list(crit_times)
+        conn.commit()
+        # conn.close()
+        print('results written to SQLite database')
 
+    def csv_write(self):
+        writelist = []
 
-def export_results(results_tab):
-    writelist = []
-    for i in results_tab:
-        if len(writelist) < 2:
-            writelist.append('{},{},{}\n'.format('', i[0], i[1]))
-        else:
-            writelist.append('{},{},{}\n'.format(len(writelist) - 2, i[0], i[1]))
+        writelist.append('{},{},{}\n'.format('', *self.res_tab[0]))
 
-    with open('stoch_res.csv', 'w') as file:
-        file.writelines(writelist)
-    print('results written to CSV file')
+        for i in self.res_tab[1:]:
+            writelist.append('{},{},{}\n'.format(len(writelist) - 1, *i))
+
+        with open('stoch_res.csv', 'w') as file:
+            file.writelines(writelist)
+        print('results written to CSV file')
+
+    def sql_read(self):
+        conn = self.__sql_connect()
+        conn.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
+        # conn.execute("SELECT * FROM results_ozone")
+        print(*conn.cursor().fetchall())
 
 
 """calculating critical temperature according to equation from Eurocode 3"""
@@ -483,6 +465,9 @@ def export_results(results_tab):
 
 def temp_crit(coef):
     return 39.19 * np.log(1 / 0.9674 / coef ** 3.833 - 1) + 482
+
+
+'''returns random (between given boundaries) fire parameters'''
 
 
 def random_fire(xmax, ymax, dmax):
@@ -498,4 +483,7 @@ def random_fire(xmax, ymax, dmax):
 
 if __name__ == '__main__':
 
-    Main().get_results(3)
+    Main('C:\Program Files (x86)\OZone 3', 'D:\ozone_results', 'D:\CR\_zadania\_konstrukcje\dlagita\config', 's190330'
+         ).get_results(2)       # windows paths
+
+    # Export([]).sql_read()
