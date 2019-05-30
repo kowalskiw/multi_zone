@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="class Export added and modified,">
+    <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/s190330.udf" beforeDir="false" afterPath="$PROJECT_DIR$/config/s190330.udf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/results.db" beforeDir="false" afterPath="$PROJECT_DIR$/results.db" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -18,24 +17,15 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="240">
-              <caret line="487" column="10" lean-forward="true" selection-start-line="487" selection-start-column="10" selection-end-line="487" selection-end-column="40" />
+            <state relative-caret-position="325">
+              <caret line="227" column="20" selection-start-line="227" selection-start-column="20" selection-end-line="227" selection-end-column="20" />
               <folding>
-                <element signature="e#299#7046#0" />
-                <element signature="e#1707#1814#0" />
-                <element signature="e#1854#1931#0" />
-                <element signature="e#1965#2518#0" />
-                <element signature="e#2552#2971#0" />
-                <element signature="e#3004#3219#0" />
-                <element signature="e#3261#3401#0" />
-                <element signature="e#3431#3462#0" />
-                <element signature="e#4975#5832#0" />
-                <element signature="e#5866#5963#0" />
-                <element signature="e#5999#6096#0" />
-                <element signature="e#6129#7046#0" />
-                <element signature="e#7616#7706#0" />
-                <element signature="e#10700#13304#0" />
-                <element signature="e#13718#14893#0" />
+                <element signature="e#0#37#0" expanded="true" />
+                <element signature="e#299#7070#0" />
+                <element signature="e#11060#13644#0" />
+                <element signature="e#13710#14885#0" />
+                <element signature="e#14992#15051#0" />
+                <element signature="e#15159#15373#0" />
               </folding>
             </state>
           </provider>
@@ -44,7 +34,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/rob.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="136">
+            <state>
               <caret line="61" selection-start-line="61" selection-end-line="61" />
               <folding>
                 <element signature="e#0#39#0" expanded="true" />
@@ -59,9 +49,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>fire</find>
-      <find>sbp</find>
-      <find>coords</find>
       <find>sim_name</find>
       <find>ran</find>
       <find>choose_max</find>
@@ -89,6 +76,9 @@
       <find>self.ozone_path</find>
       <find>path</find>
       <find>:1</find>
+      <find>\</find>
+      <find>OS</find>
+      <find>OS to</find>
     </findStrings>
     <replaceStrings>
       <replace>steel_temp</replace>
@@ -106,8 +96,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-8" />
-    <option name="y" value="-8" />
+    <option name="x" value="2199" />
+    <option name="y" value="-283" />
     <option name="width" value="697" />
     <option name="height" value="735" />
   </component>
@@ -133,7 +123,7 @@
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -255,14 +245,21 @@
       <option name="project" value="LOCAL" />
       <updated>1558183073980</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="paths and structure ordered">
+      <created>1559138382864</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1559138382864</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
+    <frame x="1358" y="-283" width="1696" height="1026" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49918166" visible="true" weight="0.09821428" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49918166" visible="true" weight="0.07961399" />
       <window_info id="Project Explorer" order="1" />
       <window_info id="Structure" order="2" sideWeight="0.5008183" side_tool="true" weight="0.09821428" />
       <window_info id="Favorites" order="3" side_tool="true" />
@@ -270,7 +267,7 @@
       <window_info id="DB Browser" order="5" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.33387887" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.33387887" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.36006546" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -334,7 +331,8 @@
     <MESSAGE value="Some charts added, saving results in sqlite DB - in progress" />
     <MESSAGE value="Architecture changed, prepared for multisimulation, bug with nearest func" />
     <MESSAGE value="nearest func bugs fixed, rounding added, few first runs unstable - to be fixed" />
-    <option name="LAST_COMMIT_MESSAGE" value="nearest func bugs fixed, rounding added, few first runs unstable - to be fixed" />
+    <MESSAGE value="paths and structure ordered" />
+    <option name="LAST_COMMIT_MESSAGE" value="paths and structure ordered" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -345,13 +343,33 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>221</line>
+          <line>223</line>
           <option name="timeStamp" value="6" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/main.py</url>
-          <line>241</line>
-          <option name="timeStamp" value="7" />
+          <line>227</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>244</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>248</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>253</line>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>257</line>
+          <option name="timeStamp" value="13" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -364,31 +382,22 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="240">
-          <caret line="487" column="10" lean-forward="true" selection-start-line="487" selection-start-column="10" selection-end-line="487" selection-end-column="40" />
+        <state relative-caret-position="325">
+          <caret line="227" column="20" selection-start-line="227" selection-start-column="20" selection-end-line="227" selection-end-column="20" />
           <folding>
-            <element signature="e#299#7046#0" />
-            <element signature="e#1707#1814#0" />
-            <element signature="e#1854#1931#0" />
-            <element signature="e#1965#2518#0" />
-            <element signature="e#2552#2971#0" />
-            <element signature="e#3004#3219#0" />
-            <element signature="e#3261#3401#0" />
-            <element signature="e#3431#3462#0" />
-            <element signature="e#4975#5832#0" />
-            <element signature="e#5866#5963#0" />
-            <element signature="e#5999#6096#0" />
-            <element signature="e#6129#7046#0" />
-            <element signature="e#7616#7706#0" />
-            <element signature="e#10700#13304#0" />
-            <element signature="e#13718#14893#0" />
+            <element signature="e#0#37#0" expanded="true" />
+            <element signature="e#299#7070#0" />
+            <element signature="e#11060#13644#0" />
+            <element signature="e#13710#14885#0" />
+            <element signature="e#14992#15051#0" />
+            <element signature="e#15159#15373#0" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/rob.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="136">
+        <state>
           <caret line="61" selection-start-line="61" selection-end-line="61" />
           <folding>
             <element signature="e#0#39#0" expanded="true" />

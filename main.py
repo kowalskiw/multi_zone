@@ -1,9 +1,9 @@
-from os import listdir, getcwd, chdir
+from os import listdir, getcwd, chdir, popen
 import json as js
 import subprocess as sbp
 from pynput.keyboard import Key, Controller
 import time
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from matplotlib import cm
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
@@ -56,7 +56,7 @@ class CreateOZN:
 
     def material(self):
         tab_new = []
-        ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()
+        ozone_mat = open(self.ozone_path + '/OZone.sys').readlines()    # OS to check
         with open(self.files[3], 'r') as file:
             my_mat = file.readlines()
 
@@ -184,7 +184,7 @@ class CreateOZN:
             prof = file.readlines()
         tab_new.extend(prof[:3])
         if prof[2] == 'Catalogue\n':
-            ozone_prof = open(self.ozone_path + '\Profiles.sys').readlines()
+            ozone_prof = open(self.ozone_path + '/Profiles.sys').readlines()    # OS to check
             prof_dict = {}
             keys = []
             values = []
@@ -214,20 +214,25 @@ class RunSim:
     def __init__(self, ozone_path, results_path, sim_name):
         self.ozone_path = ozone_path
         # self.sim_path = results_path
-        self.sim_path = results_path + '\ '[0] + sim_name + '.ozn'
+        self.sim_path = sim_name + '.ozn'  # OS to check
         self.keys = Controller()
+        self.hware_rate = 12     # this ratio sets times of waiting for your machine response
 
     def open_ozone(self):
-        sbp.Popen(self.ozone_path + '\OZone.exe')
-        time.sleep(0.5)
-        self.keys.press(Key.right)
-        self.keys.press(Key.enter)
-        time.sleep(5)
+        popen('wine ' + self.ozone_path + '/OZone.exe')   # OS to check
+        # windows code
+        # time.sleep(0.5)
+        # self.keys.press(Key.right)
+        # self.keys.press(Key.enter)
+        # linux code
+        time.sleep(7*self.hware_rate)
+        with self.keys.pressed(Key.alt):
+            self.keys.press(Key.tab)
         [self.keys.press(Key.tab) for i in range(3)]
         print('OZone3 is running')
 
     def close_ozn(self):
-        time.sleep(1)
+        time.sleep(1*self.hware_rate)
         with self.keys.pressed(Key.alt):
             self.keys.press(Key.f4)
 
@@ -239,17 +244,18 @@ class RunSim:
             keys.press('o')
         time.sleep(1)
         keys.type(self.sim_path)
+        time.sleep(5)
         keys.press(Key.enter)
-        time.sleep(4)
+        time.sleep(4*self.hware_rate)
 
         # run "thermal action"
         [(keys.press(Key.tab), time.sleep(0.1)) for i in range(7)]
         keys.press(Key.enter)
-        time.sleep(3)
+        time.sleep(3*self.hware_rate)
 
         # run "steel temperature"
         keys.press(Key.tab)
-        time.sleep(1)
+        time.sleep(1*self.hware_rate)
         keys.press(Key.enter)
         keys.press(Key.tab)
 
@@ -267,7 +273,7 @@ class Main:
 
     def add_data(self):
         self.steel_temp = []
-        with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:
+        with open(self.paths[1] + '/' + self.paths[3] + '.stt', 'r') as file:   # OS to check
             stt = file.readlines()
         for i in stt[2:]:
             self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
@@ -336,8 +342,8 @@ class Main:
 
 
 class Charting:
-    def __init__(self, results_tab):
-        self.config_path = 'D:\CR\_zadania\_konstrukcje\dlagita\config'
+    def __init__(self, config_path, results_tab):
+        self.config_path = config_path
         self.results = results_tab
 
     # def plot_single(self):
@@ -482,8 +488,11 @@ def random_fire(xmax, ymax, dmax):
 
 
 if __name__ == '__main__':
+    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results', 'D:\CR\_zadania\_konstrukcje\dlagita\config',\
+                    's190330'
+    linux_paths = '/mnt/hgfs/ozone_src_shared', '/mnt/hgfs/ozone_results_shared', '/mnt/hgfs/ozone_plug_shared/config',\
+                  's190330'
 
-    Main('C:\Program Files (x86)\OZone 3', 'D:\ozone_results', 'D:\CR\_zadania\_konstrukcje\dlagita\config', 's190330'
-         ).get_results(2)       # windows paths
+    Main(*linux_paths).get_results(2)
 
     # Export([]).sql_read()
