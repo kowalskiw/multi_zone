@@ -16,8 +16,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3722">
-              <caret line="318" column="42" lean-forward="true" selection-start-line="318" selection-start-column="42" selection-end-line="318" selection-end-column="42" />
+            <state relative-caret-position="416">
+              <caret line="502" lean-forward="true" selection-start-line="502" selection-end-line="502" />
               <folding>
                 <element signature="e#11270#13854#0" />
                 <element signature="e#13160#13528#0" />
@@ -269,7 +269,14 @@
       <option name="project" value="LOCAL" />
       <updated>1560420917343</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="tiding up the code">
+      <created>1560424135746</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1560424135746</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -284,7 +291,7 @@
       <window_info id="DB Browser" order="5" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.3336945" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.3336945" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.35969663" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -292,7 +299,7 @@
       <window_info anchor="bottom" id="Console" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" weight="0.3289689" />
-      <window_info active="true" anchor="bottom" id="Version Control" order="10" visible="true" weight="0.24052005" />
+      <window_info anchor="bottom" id="Version Control" order="10" weight="0.24052005" />
       <window_info anchor="bottom" id="Python Console" order="11" />
       <window_info anchor="bottom" id="DB Execution Console" order="12" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
@@ -352,7 +359,8 @@
     <MESSAGE value="semi-prepared for linux OS" />
     <MESSAGE value="navigaiton in RunSim() and parsing in CreateOZN() changed" />
     <MESSAGE value="linux slashes" />
-    <option name="LAST_COMMIT_MESSAGE" value="linux slashes" />
+    <MESSAGE value="tiding up the code" />
+    <option name="LAST_COMMIT_MESSAGE" value="tiding up the code" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -372,8 +380,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3722">
-          <caret line="318" column="42" lean-forward="true" selection-start-line="318" selection-start-column="42" selection-end-line="318" selection-end-column="42" />
+        <state relative-caret-position="416">
+          <caret line="502" lean-forward="true" selection-start-line="502" selection-end-line="502" />
           <folding>
             <element signature="e#11270#13854#0" />
             <element signature="e#13160#13528#0" />

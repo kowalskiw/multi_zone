@@ -214,7 +214,7 @@ class RunSim:
     def __init__(self, ozone_path, results_path, sim_name):
         self.ozone_path = ozone_path
         # self.sim_path = results_path
-        self.sim_path = sim_name + '.ozn'  # OS to check
+        self.sim_path = 'wine ' + sim_name + '.ozn'  # OS to check
         self.keys = Controller()
         self.hware_rate = 1     # this ratio sets times of waiting for your machine response
 
@@ -229,8 +229,8 @@ class RunSim:
 
         # linux code
         time.sleep(7*self.hware_rate)
-        with self.keys.pressed(Key.alt):                # OS to check
-            self.keys.press(Key.tab)
+        # with self.keys.pressed(Key.alt):                # OS to check
+        #     self.keys.press(Key.tab)
         print('OZone3 is running')
 
     def close_ozn(self):
