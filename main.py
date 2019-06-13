@@ -97,12 +97,10 @@ class CreateOZN:
         return tab_new
 
     def smoke_extractors(self):
-        tab_new = []
         with open(self.sim_name+'.ext', 'r') as file:
             ext = file.readlines()
-        tab_new = ext
 
-        return tab_new
+        return ext
 
     def fire(self):
         # this is for user defined fire
@@ -313,14 +311,14 @@ class Main:
         # inside loop you have to declare differences between every analysis and boundary conditions
         for props in fires:
             chdir(self.paths[2])
-            with open(listdir(getcwd())[8], 'r') as file:
+            with open(self.paths[-1] + '.udf', 'r') as file:
                 fire = file.readlines()
 
             fire[6] = str(props[0]) + '\n'
             fire[7] = str(props[1]) + '\n'
             fire[8] = str(props[2]) + '\n'
 
-            with open(listdir(getcwd())[8], 'w') as file:
+            with open(self.paths[-1] + '.udf', 'w') as file:
                 file.writelines(fire)
 
             CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()

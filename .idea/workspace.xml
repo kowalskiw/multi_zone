@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="semi-prepared for linux OS">
+    <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/s190330.udf" beforeDir="false" afterPath="$PROJECT_DIR$/config/s190330.udf" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -17,8 +16,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-224">
-              <caret line="472" lean-forward="true" selection-start-line="472" selection-end-line="472" />
+            <state relative-caret-position="3722">
+              <caret line="318" column="42" lean-forward="true" selection-start-line="318" selection-start-column="42" selection-end-line="318" selection-end-column="42" />
               <folding>
                 <element signature="e#11270#13854#0" />
                 <element signature="e#13160#13528#0" />
@@ -74,8 +73,8 @@
       <find>geom()</find>
       <find>geom(</find>
       <find>geom</find>
-      <find>OS</find>
       <find>cre</find>
+      <find>OS</find>
     </findStrings>
     <replaceStrings>
       <replace>steel_temp</replace>
@@ -256,7 +255,21 @@
       <option name="project" value="LOCAL" />
       <updated>1559233566366</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="navigaiton in RunSim() and parsing in CreateOZN() changed">
+      <created>1560419256037</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1560419256038</updated>
+    </task>
+    <task id="LOCAL-00011" summary="linux slashes">
+      <created>1560420917343</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1560420917343</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -271,7 +284,7 @@
       <window_info id="DB Browser" order="5" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.3336945" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.3336945" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.35969663" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -279,7 +292,7 @@
       <window_info anchor="bottom" id="Console" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" weight="0.3289689" />
-      <window_info anchor="bottom" id="Version Control" order="10" weight="0.2405892" />
+      <window_info active="true" anchor="bottom" id="Version Control" order="10" visible="true" weight="0.24052005" />
       <window_info anchor="bottom" id="Python Console" order="11" />
       <window_info anchor="bottom" id="DB Execution Console" order="12" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
@@ -337,7 +350,9 @@
     <MESSAGE value="nearest func bugs fixed, rounding added, few first runs unstable - to be fixed" />
     <MESSAGE value="paths and structure ordered" />
     <MESSAGE value="semi-prepared for linux OS" />
-    <option name="LAST_COMMIT_MESSAGE" value="semi-prepared for linux OS" />
+    <MESSAGE value="navigaiton in RunSim() and parsing in CreateOZN() changed" />
+    <MESSAGE value="linux slashes" />
+    <option name="LAST_COMMIT_MESSAGE" value="linux slashes" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -357,8 +372,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-224">
-          <caret line="472" lean-forward="true" selection-start-line="472" selection-end-line="472" />
+        <state relative-caret-position="3722">
+          <caret line="318" column="42" lean-forward="true" selection-start-line="318" selection-start-column="42" selection-end-line="318" selection-end-column="42" />
           <folding>
             <element signature="e#11270#13854#0" />
             <element signature="e#13160#13528#0" />
