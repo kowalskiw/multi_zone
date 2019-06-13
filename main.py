@@ -11,11 +11,12 @@ import sqlite3 as sql
 
 
 class CreateOZN:
-    def __init__(self, ozone_path, results_path):
+    def __init__(self, ozone_path, results_path, sim_name):
         self.files = listdir(getcwd())
         self.title = self.files[0].split('.')[0]
         self.ozone_path = ozone_path
         self.results_path = results_path
+        self.sim_name = sim_name
 
     def write_ozn(self):
         tab_new = []
@@ -45,19 +46,20 @@ class CreateOZN:
             print('OZone simulation file (.ozn) has been written!')
 
     def geom(self):
-        with open(self.files[2], 'r') as file:
+        print(self.sim_name)
+        with open(self.sim_name+'.geom', 'r') as file:
             geom_tab = file.readlines()
 
         return geom_tab[:6]
 
     def elements_place(self):
-        with open(self.files[9], 'r') as file:
+        with open(self.sim_name+'.xel', 'r') as file:
             return dict(js.load(file))
 
     def material(self):
         tab_new = []
-        ozone_mat = open(self.ozone_path + '/OZone.sys').readlines()    # OS to check
-        with open(self.files[3], 'r') as file:
+        ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()    # OS to check
+        with open(self.sim_name+'.mat', 'r') as file:
             my_mat = file.readlines()
 
         for j in my_mat:
@@ -77,7 +79,7 @@ class CreateOZN:
         for i in range(60):
             no_open.append('\n')
 
-        with open(self.files[4], 'r') as file:
+        with open(self.sim_name+'.op', 'r') as file:
             holes = js.load(file)
 
         for k, v in holes:
@@ -88,7 +90,7 @@ class CreateOZN:
 
     def ceiling(self):
         tab_new = []
-        with open(self.files[0], 'r') as file:
+        with open(self.sim_name+'.cel', 'r') as file:
             ceil = file.readlines()
         tab_new.extend(ceil)
         [tab_new.append('\n') for i in range((3 - int(ceil[0]))*3)]
@@ -96,7 +98,7 @@ class CreateOZN:
 
     def smoke_extractors(self):
         tab_new = []
-        with open(self.files[1], 'r') as file:
+        with open(self.sim_name+'.ext', 'r') as file:
             ext = file.readlines()
         tab_new = ext
 
@@ -121,7 +123,7 @@ class CreateOZN:
         #         tab_new.extend([str(time) + '\n', str(hrr) + '\n', str(mass_flux) + '\n', str(area) + '\n'])
 
         tab_new = []
-        with open(self.files[8], 'r') as file:
+        with open(self.sim_name+'.udf', 'r') as file:
             fire = file.readlines()
         tab_new.extend(fire[:10])
         for line in fire[10:]:
@@ -167,24 +169,24 @@ class CreateOZN:
             return 0, dy, False
 
     def strategy(self):
-        with open(self.files[7], 'r') as file:
+        with open(self.sim_name+'.str', 'r') as file:
             strat = file.readlines()
 
         return strat
 
     def parameters(self):
-        with open(self.files[5], 'r') as file:
+        with open(self.sim_name+'.par', 'r') as file:
             param = file.readlines()
 
         return param
 
     def profile(self):
         tab_new = []
-        with open(self.files[6], 'r') as file:
+        with open(self.sim_name+'.prof', 'r') as file:
             prof = file.readlines()
         tab_new.extend(prof[:3])
         if prof[2] == 'Catalogue\n':
-            ozone_prof = open(self.ozone_path + '/Profiles.sys').readlines()    # OS to check
+            ozone_prof = open(self.ozone_path + '\Profiles.sys').readlines()    # OS to check
             prof_dict = {}
             keys = []
             values = []
@@ -216,19 +218,21 @@ class RunSim:
         # self.sim_path = results_path
         self.sim_path = sim_name + '.ozn'  # OS to check
         self.keys = Controller()
-        self.hware_rate = 12     # this ratio sets times of waiting for your machine response
+        self.hware_rate = 1     # this ratio sets times of waiting for your machine response
 
     def open_ozone(self):
-        popen('wine ' + self.ozone_path + '/OZone.exe')   # OS to check
-        # windows code
+        popen(self.ozone_path + '\OZone.exe')   # OS to check
+
+        # # windows code
         # time.sleep(0.5)
         # self.keys.press(Key.right)
         # self.keys.press(Key.enter)
+        # time.sleep(7*self.hware_rate)
+
         # linux code
         time.sleep(7*self.hware_rate)
-        with self.keys.pressed(Key.alt):
+        with self.keys.pressed(Key.alt):                # OS to check
             self.keys.press(Key.tab)
-        [self.keys.press(Key.tab) for i in range(3)]
         print('OZone3 is running')
 
     def close_ozn(self):
@@ -244,20 +248,19 @@ class RunSim:
             keys.press('o')
         time.sleep(1)
         keys.type(self.sim_path)
-        time.sleep(5)
         keys.press(Key.enter)
         time.sleep(4*self.hware_rate)
 
         # run "thermal action"
-        [(keys.press(Key.tab), time.sleep(0.1)) for i in range(7)]
+        with self.keys.pressed(Key.alt):
+            self.keys.press('t')
         keys.press(Key.enter)
         time.sleep(3*self.hware_rate)
 
         # run "steel temperature"
-        keys.press(Key.tab)
-        time.sleep(1*self.hware_rate)
+        with self.keys.pressed(Key.alt):
+            self.keys.press('s')
         keys.press(Key.enter)
-        keys.press(Key.tab)
 
         print('analises has been run')
 
@@ -266,14 +269,14 @@ class RunSim:
 
 
 class Main:
-    def __init__(self, ozone_path, results_path, config_path, sim_name):
-        self.paths = [ozone_path, results_path, config_path, sim_name]
+    def __init__(self, paths):
+        self.paths = paths
         self.steel_temp = []
         self.results = []
 
     def add_data(self):
         self.steel_temp = []
-        with open(self.paths[1] + '/' + self.paths[3] + '.stt', 'r') as file:   # OS to check
+        with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:   # OS to check
             stt = file.readlines()
         for i in stt[2:]:
             self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
@@ -300,7 +303,9 @@ class Main:
         fires = []
         chdir(self.paths[2])
         for i in range(n_sampl):
-            fires.append(random_fire(*[CreateOZN(*self.paths[:2]).geom()[3:5][i][:-1] for i in range(2)], 20))
+            print(self.paths)
+            fires.append(random_fire(*[CreateOZN(*self.paths[:2], self.paths[-1]).geom()[3:5][i][:-1]
+                                       for i in range(2)], 20))
 
         RunSim(*self.paths[:2], self.paths[3]).open_ozone()
 
@@ -318,7 +323,7 @@ class Main:
             with open(listdir(getcwd())[8], 'w') as file:
                 file.writelines(fire)
 
-            CreateOZN(*self.paths[:2]).write_ozn()
+            CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
 
             RunSim(*self.paths[:2], self.paths[3]).run_simulation()
             time.sleep(1)
@@ -492,7 +497,8 @@ if __name__ == '__main__':
                     's190330'
     linux_paths = '/mnt/hgfs/ozone_src_shared', '/mnt/hgfs/ozone_results_shared', '/mnt/hgfs/ozone_plug_shared/config',\
                   's190330'
+                    # OZone program folder, results folder, config folder, simulation name
 
-    Main(*linux_paths).get_results(2)
+    Main(windows_paths).get_results(2)
 
     # Export([]).sql_read()
