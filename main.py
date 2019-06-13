@@ -58,7 +58,7 @@ class CreateOZN:
 
     def material(self):
         tab_new = []
-        ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()    # OS to check
+        ozone_mat = open(self.ozone_path + '/OZone.sys').readlines()    # OS to check
         with open(self.sim_name+'.mat', 'r') as file:
             my_mat = file.readlines()
 
@@ -186,7 +186,7 @@ class CreateOZN:
             prof = file.readlines()
         tab_new.extend(prof[:3])
         if prof[2] == 'Catalogue\n':
-            ozone_prof = open(self.ozone_path + '\Profiles.sys').readlines()    # OS to check
+            ozone_prof = open(self.ozone_path + '/Profiles.sys').readlines()    # OS to check
             prof_dict = {}
             keys = []
             values = []
@@ -221,7 +221,7 @@ class RunSim:
         self.hware_rate = 1     # this ratio sets times of waiting for your machine response
 
     def open_ozone(self):
-        popen(self.ozone_path + '\OZone.exe')   # OS to check
+        popen(self.ozone_path + '/OZone.exe')   # OS to check
 
         # # windows code
         # time.sleep(0.5)
@@ -276,7 +276,7 @@ class Main:
 
     def add_data(self):
         self.steel_temp = []
-        with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:   # OS to check
+        with open(self.paths[1] + '/'[0] + self.paths[3] + '.stt', 'r') as file:   # OS to check
             stt = file.readlines()
         for i in stt[2:]:
             self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
@@ -499,6 +499,6 @@ if __name__ == '__main__':
                   's190330'
                     # OZone program folder, results folder, config folder, simulation name
 
-    Main(windows_paths).get_results(2)
+    Main(linux_paths).get_results(2)
 
     # Export([]).sql_read()
