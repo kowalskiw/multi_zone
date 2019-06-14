@@ -46,7 +46,6 @@ class CreateOZN:
             print('OZone simulation file (.ozn) has been written!')
 
     def geom(self):
-        print(self.sim_name)
         with open(self.sim_name+'.geom', 'r') as file:
             geom_tab = file.readlines()
 
@@ -214,12 +213,12 @@ class RunSim:
     def __init__(self, ozone_path, results_path, sim_name):
         self.ozone_path = ozone_path
         # self.sim_path = results_path
-        self.sim_path = 'wine ' + sim_name + '.ozn'  # OS to check
+        self.sim_path = sim_name + '.ozn'  # OS to check
         self.keys = Controller()
-        self.hware_rate = 1     # this ratio sets times of waiting for your machine response
+        self.hware_rate = 10     # this ratio sets times of waiting for your machine response
 
     def open_ozone(self):
-        popen(self.ozone_path + '/OZone.exe')   # OS to check
+        popen('wine {}/OZone.exe'.format(self.ozone_path))   # OS to check
 
         # # windows code
         # time.sleep(0.5)
@@ -246,6 +245,7 @@ class RunSim:
             keys.press('o')
         time.sleep(1)
         keys.type(self.sim_path)
+        time.sleep(1)
         keys.press(Key.enter)
         time.sleep(4*self.hware_rate)
 
@@ -301,7 +301,6 @@ class Main:
         fires = []
         chdir(self.paths[2])
         for i in range(n_sampl):
-            print(self.paths)
             fires.append(random_fire(*[CreateOZN(*self.paths[:2], self.paths[-1]).geom()[3:5][i][:-1]
                                        for i in range(2)], 20))
 
@@ -448,7 +447,7 @@ class Export:
 
         conn.commit()
         # conn.close()
-        print('results written to SQLite database')
+        print('results has been written to SQLite database')
 
     def csv_write(self):
         writelist = []
@@ -460,7 +459,7 @@ class Export:
 
         with open('stoch_res.csv', 'w') as file:
             file.writelines(writelist)
-        print('results written to CSV file')
+        print('results has been written to CSV file')
 
     def sql_read(self):
         conn = self.__sql_connect()
