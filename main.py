@@ -1,11 +1,11 @@
 from os import listdir, getcwd, chdir, popen
 import json as js
-import subprocess as sbp
+# import subprocess as sbp
 from pynput.keyboard import Key, Controller
 import time
-# import matplotlib.pyplot as plt
-from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+# from matplotlib import cm
+# from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import sqlite3 as sql
 
@@ -247,7 +247,7 @@ class RunSim:
         keys.type(self.sim_path)
         time.sleep(1)
         keys.press(Key.enter)
-        time.sleep(4*self.hware_rate)
+        # time.sleep(4*self.hware_rate)
 
         # run "thermal action"
         with self.keys.pressed(Key.alt):
@@ -339,6 +339,10 @@ class Main:
         Export(self.results).csv_write()
         # Export(self.results).sql_write()
 
+        # creating distribution table
+        Charting(self.paths[2], self.results).distribution()
+        # there is need to make Export().csv_write() function more versatile
+
 
 '''making charts - there is a need to do little tiding'''
 
@@ -364,65 +368,80 @@ class Charting:
     #     fig.savefig("stt.png")
     #     plt.show()
 
-    def max3d(self):
-        # fix func to new architecture
+    # def max3d(self):
+    #     # fix func to new architecture
+    #
+    #     fig = plt.figure()
+    #     ax = Axes3D(fig)
+    #     x, y, z = zip(*self.results)
+    #
+    #     dim_x = list(x).count(x[0])
+    #     dim_y = list(y).count(y[0])
+    #     X = []
+    #     Y = []
+    #     Z = []
+    #
+    #     for i in range(dim_y):
+    #         X.append(list(x[i * dim_x:(i + 1) * dim_x]))
+    #     for i in range(dim_y):
+    #         Y.append(list(y[i * dim_x:(i + 1) * dim_x]))
+    #     [Z.append(list(z)[i * dim_x:(i + 1) * dim_x]) for i in range(dim_y)]
+    #
+    #     ax.scatter(np.array(X), np.array(Y), np.array(Z), cmap=cm.coolwarm,
+    #                linewidth=0, antialiased=False)
+    #
+    #     xAxisLine = ((min(x), max(x)), (0, 0), (max(z), max(z)))
+    #     ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'black')
+    #     yAxisLine = ((0, 0), (min(y), max(y)), (max(z), max(z)))
+    #     ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'black')
+    #
+    #     ax.set_xlabel("X - fire")
+    #     ax.set_ylabel("Y - fire")
+    #     ax.set_zlabel("max temperature")
+    #     ax.set_title("maximum temperature while fire axes are changing")
+    #
+    #     plt.show()
 
-        fig = plt.figure()
-        ax = Axes3D(fig)
-        x, y, z = zip(*self.results)
-
-        dim_x = list(x).count(x[0])
-        dim_y = list(y).count(y[0])
-        X = []
-        Y = []
-        Z = []
-
-        for i in range(dim_y):
-            X.append(list(x[i * dim_x:(i + 1) * dim_x]))
-        for i in range(dim_y):
-            Y.append(list(y[i * dim_x:(i + 1) * dim_x]))
-        [Z.append(list(z)[i * dim_x:(i + 1) * dim_x]) for i in range(dim_y)]
-
-        ax.scatter(np.array(X), np.array(Y), np.array(Z), cmap=cm.coolwarm,
-                   linewidth=0, antialiased=False)
-
-        xAxisLine = ((min(x), max(x)), (0, 0), (max(z), max(z)))
-        ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'black')
-        yAxisLine = ((0, 0), (min(y), max(y)), (max(z), max(z)))
-        ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'black')
-
-        ax.set_xlabel("X - fire")
-        ax.set_ylabel("Y - fire")
-        ax.set_zlabel("max temperature")
-        ax.set_title("maximum temperature while fire axes are changing")
-
-        plt.show()
-
-    def prob_charts(self, sql_tab):
+    def distribution(self):
+        time, temp = zip(*self.results[1:])
+        time_list = list(time)
         probs = []
         times = []
-        repetitions = len(sql_tab)
-        while len(sql_tab) > 0:
-            i = sql_tab[0]
-            probs.append(sql_tab.count(i)/repetitions)
-            times.append(i)
-            while i in sql_tab:
-                sql_tab.remove(i)
+        no_collapse = 0
 
+        # probability of no collapse scenario
+        if 0 in time_list:
+            no_collapse = time_list.count(0) / len(time_list)
+            while 0 in time_list:
+                time_list.remove(0)
+
+        # distribution of collapse times
+        n_sample = len(time_list)
+        while len(time_list) > 0:
+            i = time_list[0]
+            probs.append(time_list.count(i) / n_sample)
+            times.append(i)
+            while i in time_list:
+                time_list.remove(i)
+
+        print('P(no_collapse) = {}'.format(no_collapse))
         print(times)
         print(probs)
+
         plt.scatter(times, probs)
         plt.show()
 
+        return [[no_collapse], times, probs]
+
     # aim of test 1 is to check how cross-section temperature is changing along column
-    def test1_charts(self):
-        # fix func to new architecture
-        z, temp = zip(*self.results)
-        plt.scatter(z, temp)
-        plt.xlabel('height')
-        plt.ylabel('temperature')
-        plt.grid(True)
-        plt.show()
+    # def test1_charts(self):
+    #     # fix func to new architecture
+    #     z, temp = zip(*self.results)
+    #     plt.scatter(z, temp)
+    #     plt.xlabel('height')
+    #     plt.ylabel('temperature')
+    #     plt.grid(True)
+    #     plt.show()
 
 
 '''exporting results to SQLite database'''
