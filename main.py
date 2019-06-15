@@ -132,7 +132,7 @@ class CreateOZN:
 
         tab_new[7] = str(x) + '\n'
         tab_new[8] = str(y) + '\n'
-        if z:
+        if z != -1:
             tab_new[3] = str(z) + '\n'
 
         return tab_new
@@ -163,7 +163,7 @@ class CreateOZN:
             return dx, dy, 0
         else:
             print('there is a beam considered')
-            return 0, dy, False
+            return 0, dy, -1
 
     def strategy(self):
         with open(self.sim_name+'.str', 'r') as file:
@@ -253,7 +253,7 @@ class RunSim:
         with self.keys.pressed(Key.alt):
             self.keys.press('t')
         keys.press(Key.enter)
-        time.sleep(3*self.hware_rate)
+        time.sleep(5*self.hware_rate)
 
         # run "steel temperature"
         with self.keys.pressed(Key.alt):
@@ -403,7 +403,7 @@ class Charting:
     #     plt.show()
 
     def distribution(self):
-        time, temp = zip(*self.results[1:])
+        temp, time = zip(*self.results[1:])
         time_list = list(time)
         probs = []
         times = []
