@@ -17,6 +17,7 @@ class CreateOZN:
         self.ozone_path = ozone_path
         self.results_path = results_path
         self.sim_name = sim_name
+        self.element_type = 0       # 0 - column, 1 - beam
 
     def write_ozn(self):
         tab_new = []
@@ -118,26 +119,30 @@ class CreateOZN:
         #         mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
         #         area = round(max_area*hrr/max_hrr, ndigits=2)
         #         tab_new.extend([str(time) + '\n', str(hrr) + '\n', str(mass_flux) + '\n', str(area) + '\n'])
-
+        hrr, area = leakage_fire(30, 300)
+        h, x, y = self.geom()[2:5]
+        diam = round(2*np.sqrt(area/np.pi), 2)
         tab_new = []
         with open(self.sim_name+'.udf', 'r') as file:
             fire = file.readlines()
-        tab_new.extend(fire[:10])
-        for line in fire[10:]:
-            time = round(float(line.split()[0])/60, ndigits=2)   # it may be done easier way
-            hrr = round(float(line.split()[1]), ndigits=2)
-            tab_new.extend([str(time) + '\n', str(hrr) + '\n'])
+        tab_new.extend(fire)
+        fire.insert(2, h)
 
-        x, y, z = self.fire_place(float(fire[7][:-1]), float(fire[8][:-1]), float(fire[6][:-1]), self.elements_place())
+        for i in hrr:
+            tab_new.append('{}\n'.format(i))
 
-        tab_new[7] = str(x) + '\n'
-        tab_new[8] = str(y) + '\n'
-        if z != -1:
-            tab_new[3] = str(z) + '\n'
+        # overwriting absolute positions with relative ones
+        x, y = self.fire_place(*random_position(x, y), diam, self.elements_place())
+        tab_new.insert(6, '{}\n'.format(diam))
+        tab_new.insert(7, '{}\n'.format(round(x, 2)))
+        tab_new.insert(8, '{}\n'.format(round(y, 2)))
+        if self.element_type == 0:
+            tab_new[3] = '0\n'          # overwriting height of measures
+        tab_new.insert(9, '{}\n'.format(len(hrr)/2))
 
         return tab_new
 
-    # sets fire in regard to the nearest element
+    # sets fire position relatively to the nearest element
     def fire_place(self, xf, yf, f_d, elements):
         def nearest(src, tab):
             delta = 0
@@ -160,10 +165,11 @@ class CreateOZN:
 
         if f_d > 2*(dx*dx + dy*dy)**0.5:
             print('there is a column considered')
-            return dx, dy, 0
+            return dx, dy
         else:
             print('there is a beam considered')
-            return 0, dy, -1
+            self.element_type = 1
+            return 0, dy
 
     def strategy(self):
         with open(self.sim_name+'.str', 'r') as file:
@@ -198,11 +204,14 @@ class CreateOZN:
 
             for t, p in prof_dict.items():
                 try:
-                    tab_new.extend([str(list(prof_dict.keys()).index(t)) + '\n', str(p.index(prof[3][:-1])) + '\n'])
-                except:
+                    tab_new.extend([str(list(prof_dict.keys()).index(t)) + '\n',
+                                    str(p.index(prof[3 + self.element_type][:-1])) + '\n'])
+                except ValueError:
                     pass
 
-            tab_new.extend(prof[4:])
+            tab_new.extend(prof[5:])
+        else:
+            print('You do not use catalogue - repair .prof config file!')
         return tab_new
 
 
@@ -297,37 +306,27 @@ class Main:
         return 0
 
     def get_results(self, n_sampl):
-        # randomize of fire location (x, y) and fire diameter
-        fires = []
-        chdir(self.paths[2])
-        for i in range(n_sampl):
-            fires.append(random_fire(*[CreateOZN(*self.paths[:2], self.paths[-1]).geom()[3:5][i][:-1]
-                                       for i in range(2)], 20))
 
+        # randomize functions are out of this class, they are recalled in CreateOZN() class
+
+        chdir(self.paths[2])
         RunSim(*self.paths[:2], self.paths[3]).open_ozone()
 
         # !!!this is main loop for stochastic analyses!!!
-        # inside loop you have to declare differences between every analysis and boundary conditions
-        for props in fires:
-            chdir(self.paths[2])
-            with open(self.paths[-1] + '.udf', 'r') as file:
-                fire = file.readlines()
+        # n_sampl is quantity of repetitions
+        for i in range(n_sampl):
+            try:
+                chdir(self.paths[2])
+                CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
 
-            fire[6] = str(props[0]) + '\n'
-            fire[7] = str(props[1]) + '\n'
-            fire[8] = str(props[2]) + '\n'
+                RunSim(*self.paths[:2], self.paths[3]).run_simulation()
+                time.sleep(1)
 
-            with open(self.paths[-1] + '.udf', 'w') as file:
-                file.writelines(fire)
-
-            CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
-
-            RunSim(*self.paths[:2], self.paths[3]).run_simulation()
-            time.sleep(1)
-
-            # writing results to table
-            self.results.append((self.choose_max(), self.choose_crit(),))
-            print(self.results[len(self.results) - 1])
+                # writing results to table
+                self.results.append((self.choose_max(), self.choose_crit(),))
+                print(self.results[len(self.results) - 1])
+            except (KeyError, TypeError, ValueError):
+                print('An error occured, simulation passed.')
 
         # safe closing code:
         RunSim(*self.paths[:2], self.paths[3]).close_ozn()
@@ -336,7 +335,7 @@ class Main:
         self.results.insert(0, ('MaxTemp_C_degree', 'CriticalTime_min'))
 
         # exporting results
-        Export(self.results).csv_write()
+        Export(self.results).csv_write('stoch_res')
         # Export(self.results).sql_write()
 
         # creating distribution table
@@ -428,7 +427,9 @@ class Charting:
         print(times)
         print(probs)
 
-        plt.scatter(times, probs)
+        fig, ax = plt.subplots()
+        ax.hist(times, density=True, cumulative=False, histtype='stepfilled')
+
         plt.show()
 
         return [[no_collapse], times, probs]
@@ -468,7 +469,7 @@ class Export:
         # conn.close()
         print('results has been written to SQLite database')
 
-    def csv_write(self):
+    def csv_write(self, title):
         writelist = []
 
         writelist.append('{},{},{}\n'.format('', *self.res_tab[0]))
@@ -476,7 +477,7 @@ class Export:
         for i in self.res_tab[1:]:
             writelist.append('{},{},{}\n'.format(len(writelist) - 1, *i))
 
-        with open('stoch_res.csv', 'w') as file:
+        with open('{].csv'.format(title), 'w') as file:
             file.writelines(writelist)
         print('results has been written to CSV file')
 
@@ -497,15 +498,29 @@ def temp_crit(coef):
 '''returns random (between given boundaries) fire parameters'''
 
 
-def random_fire(xmax, ymax, dmax):
+def random_position(xmax, ymax):
     fire = []
-
-    for i in [dmax, xmax, ymax]:
-        fire.append(np.random.randint(0, int(10 * float(i)))/10)
-    while fire[0] == 0:
-        fire[0] = np.random.randint(0, int(10 * float(dmax)))/10
+    [fire.append(np.random.randint(0, int(10 * float(i)))/10) for i in (xmax, ymax)]
 
     return fire
+
+
+def leakage_fire(a_min, a_max):
+    area = np.random.randint(a_min, a_max)
+
+    mr = 0.029              # [kg/m2/s] - mass lose rate
+    qc = 20                 # [MJ/kg] - heat of combustion
+    hrr = qc * mr * area    # [MW] - heat release rate
+    am_index = 0.3          # m2/kg - area of leakage to mass of fuel
+    time_end = int(1 / (am_index * mr))
+
+    hrr_list = [0, 0]
+    for i in range(10, time_end, 10):
+        hrr_list.extend([i, hrr])
+    hrr_list.extend([hrr_list[-2] + 10, 0])
+    print('HRR = {}kW'.format(hrr))
+
+    return hrr_list, area
 
 
 if __name__ == '__main__':
@@ -515,6 +530,7 @@ if __name__ == '__main__':
                   's190330'
                     # OZone program folder, results folder, config folder, simulation name
 
-    Main(linux_paths).get_results(2)
+    #Main(linux_paths).get_results(2)
 
     # Export([]).sql_read()
+    print(leakage_fire(30, 300))
