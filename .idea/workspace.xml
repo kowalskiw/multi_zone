@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/rob.py" beforeDir="false" afterPath="$PROJECT_DIR$/rob.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -13,14 +12,14 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.50600344">
+    <splitter split-orientation="horizontal" split-proportion="0.406518">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/main.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="257">
-                  <caret line="429" column="32" lean-forward="true" selection-start-line="429" selection-start-column="32" selection-end-line="429" selection-end-column="32" />
+                <state relative-caret-position="80">
+                  <caret line="429" column="32" selection-start-line="429" selection-start-column="32" selection-end-line="429" selection-end-column="32" />
                   <folding>
                     <element signature="e#0#44#0" expanded="true" />
                     <element signature="e#660#1782#0" />
@@ -31,16 +30,6 @@
                     <element signature="e#3154#3376#0" />
                     <element signature="e#3418#3518#0" />
                     <element signature="e#3548#3579#0" />
-                    <element signature="e#6123#6227#0" />
-                    <element signature="e#6263#6367#0" />
-                    <element signature="e#7546#9123#0" />
-                    <element signature="e#7610#7861#0" />
-                    <element signature="e#9346#9603#0" />
-                    <element signature="e#9639#9730#0" />
-                    <element signature="e#9767#10001#0" />
-                    <element signature="e#12135#12159#0" />
-                    <element signature="e#14812#14894#0" />
-                    <element signature="e#16514#16573#0" />
                     <marker date="1561633951373" expanded="true" signature="2080:2101" ph="..." />
                   </folding>
                 </state>
@@ -50,8 +39,11 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/rob.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="7760">
-                  <caret line="404" column="14" selection-start-line="404" selection-start-column="14" selection-end-line="404" selection-end-column="14" />
+                <state relative-caret-position="7960">
+                  <caret line="405" column="14" selection-start-line="405" selection-start-column="14" selection-end-line="405" selection-end-column="14" />
+                  <folding>
+                    <element signature="e#0#44#0" expanded="true" />
+                  </folding>
                 </state>
               </provider>
             </entry>
@@ -63,10 +55,10 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/rob.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="214">
-                  <caret line="524" column="30" selection-start-line="524" selection-start-column="30" selection-end-line="524" selection-end-column="30" />
+                <state relative-caret-position="51">
+                  <caret line="513" column="32" selection-start-line="513" selection-start-column="32" selection-end-line="513" selection-end-column="32" />
                   <folding>
-                    <element signature="e#3548#3579#0" />
+                    <element signature="e#0#44#0" expanded="true" />
                   </folding>
                 </state>
               </provider>
@@ -78,7 +70,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>ABS</find>
       <find>abs</find>
       <find>nea</find>
       <find>bug</find>
@@ -108,6 +99,7 @@
       <find>profi</find>
       <find>fire_place</find>
       <find>random_</find>
+      <find>leak</find>
     </findStrings>
     <replaceStrings>
       <replace>steel_temp</replace>
@@ -125,17 +117,16 @@
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1354" />
-    <option name="y" value="-275" />
-    <option name="width" value="697" />
-    <option name="height" value="515" />
+    <option name="x" value="170" />
+    <option name="y" value="91" />
+    <option name="width" value="1026" />
+    <option name="height" value="546" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -147,6 +138,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -201,7 +193,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/rob.py" />
-      <option name="PARAMETERS" value="" />
+      <option name="PARAMETERS" value="3" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -337,14 +329,21 @@
       <option name="project" value="LOCAL" />
       <updated>1560601489124</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="Prepared for pool fires - win10, charting repaired, randomization outside classes">
+      <created>1561634111828</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1561634111828</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="1358" y="-314" width="1936" height="1056" extended-state="6" />
+    <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49918166" visible="true" weight="0.07850369" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49918166" visible="true" weight="0.078125" />
       <window_info id="Project Explorer" order="1" />
       <window_info id="Structure" order="2" sideWeight="0.5008183" side_tool="true" weight="0.09821428" />
       <window_info id="Favorites" order="3" side_tool="true" />
@@ -352,8 +351,8 @@
       <window_info id="DB Browser" order="5" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49947312" visible="true" weight="0.39761648" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.2892741" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49947312" weight="0.33034715" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.2889138" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -424,7 +423,8 @@
     <MESSAGE value="tiny corrections" />
     <MESSAGE value="rob.py - version for win10, main.py - linux (still with bugs); Charting.distribution() returns distribution of collapse times" />
     <MESSAGE value="Charting.distribution() method corrected" />
-    <option name="LAST_COMMIT_MESSAGE" value="Charting.distribution() method corrected" />
+    <MESSAGE value="Prepared for pool fires - win10, charting repaired, randomization outside classes" />
+    <option name="LAST_COMMIT_MESSAGE" value="Prepared for pool fires - win10, charting repaired, randomization outside classes" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -450,17 +450,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/rob.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="7760">
-          <caret line="404" column="14" selection-start-line="404" selection-start-column="14" selection-end-line="404" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="257">
-          <caret line="429" column="32" lean-forward="true" selection-start-line="429" selection-start-column="32" selection-end-line="429" selection-end-column="32" />
+        <state relative-caret-position="80">
+          <caret line="429" column="32" selection-start-line="429" selection-start-column="32" selection-end-line="429" selection-end-column="32" />
           <folding>
             <element signature="e#0#44#0" expanded="true" />
             <element signature="e#660#1782#0" />
@@ -471,17 +464,17 @@
             <element signature="e#3154#3376#0" />
             <element signature="e#3418#3518#0" />
             <element signature="e#3548#3579#0" />
-            <element signature="e#6123#6227#0" />
-            <element signature="e#6263#6367#0" />
-            <element signature="e#7546#9123#0" />
-            <element signature="e#7610#7861#0" />
-            <element signature="e#9346#9603#0" />
-            <element signature="e#9639#9730#0" />
-            <element signature="e#9767#10001#0" />
-            <element signature="e#12135#12159#0" />
-            <element signature="e#14812#14894#0" />
-            <element signature="e#16514#16573#0" />
             <marker date="1561633951373" expanded="true" signature="2080:2101" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/rob.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="51">
+          <caret line="513" column="32" selection-start-line="513" selection-start-column="32" selection-end-line="513" selection-end-column="32" />
+          <folding>
+            <element signature="e#0#44#0" expanded="true" />
           </folding>
         </state>
       </provider>

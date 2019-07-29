@@ -1,11 +1,9 @@
 from os import listdir, getcwd, chdir, popen
 import json as js
-# import subprocess as sbp
 from pynput.keyboard import Key, Controller
 import time
 import matplotlib.pyplot as plt
-# from matplotlib import cm
-# from mpl_toolkits.mplot3d import Axes3D
+from sys import argv
 import numpy as np
 import sqlite3 as sql
 
@@ -45,6 +43,7 @@ class CreateOZN:
 
             ozn_file.writelines(tab_new)
             print('OZone simulation file (.ozn) has been written!')
+        return self.element_type
 
     def geom(self):
         with open(self.sim_name+'.geom', 'r') as file:
@@ -119,26 +118,28 @@ class CreateOZN:
         #         mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
         #         area = round(max_area*hrr/max_hrr, ndigits=2)
         #         tab_new.extend([str(time) + '\n', str(hrr) + '\n', str(mass_flux) + '\n', str(area) + '\n'])
-        hrr, area = leakage_fire(30, 300)
+        hrr, area, height = leakage_fire(self.sim_name, int(self.parameters()[6][:-1]), only_mass=False)
         h, x, y = self.geom()[2:5]
         diam = round(2*np.sqrt(area/np.pi), 2)
         tab_new = []
         with open(self.sim_name + '.udf', 'r') as file:
             fire = file.readlines()
         tab_new.extend(fire)
+        tab_new.insert(0, '{}\n'.format(height))
         tab_new.insert(2, h)
 
         for i in hrr:
             tab_new.append('{}\n'.format(i))
 
         # overwriting absolute positions with relative ones
-        x, y = self.fire_place(*random_position(x, y), diam, self.elements_place())
+        xr, yr = self.fire_place(*random_position(x, y), diam, self.elements_place())
         tab_new.insert(6, '{}\n'.format(diam))
-        tab_new.insert(7, '{}\n'.format(round(x, 2)))
-        tab_new.insert(8, '{}\n'.format(round(y, 2)))
+        tab_new.insert(7, '{}\n'.format(round(xr, 2)))
+        tab_new.insert(8, '{}\n'.format(round(yr, 2)))
         if self.element_type == 0:
             tab_new[3] = '0\n'  # overwriting height of measures
         tab_new.insert(9, '{}\n'.format(len(hrr)/2))
+
 
         return tab_new
 
@@ -262,7 +263,7 @@ class RunSim:
         with self.keys.pressed(Key.alt):
             self.keys.press('t')
         keys.press(Key.enter)
-        time.sleep(6*self.hware_rate)
+        time.sleep(8*self.hware_rate)
 
         # run "steel temperature"
         with self.keys.pressed(Key.alt):
@@ -278,64 +279,85 @@ class RunSim:
 class Main:
     def __init__(self, paths):
         self.paths = paths
-        self.steel_temp = []
         self.results = []
 
     def add_data(self):
-        self.steel_temp = []
+        steel_temp = []
         with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:   # OS to check
             stt = file.readlines()
         for i in stt[2:]:
-            self.steel_temp.append((float(i.split()[0]), float(i.split()[2])))
+            steel_temp.append((float(i.split()[0]), float(i.split()[2])))
+        return steel_temp
 
     def choose_max(self):
-        self.add_data()
-        time, temp = zip(*self.steel_temp)
+        
+        time, temp = zip(*self.add_data())
 
         return float(max(temp))
 
     def choose_crit(self):
-        coef = 0.8
-        self.add_data()
-        time, temp = zip(*self.steel_temp)
+        t_crit = temp_crit(0.7)
+        stt = self.add_data()
+        int_step = 5
 
-        print(self.steel_temp)
-        for i in temp:
-            if int(i) >= temp_crit(coef):
-                return time[temp.index(i)]
-        return 0
-
+        print(stt)
+        
+        for i in stt:
+            if int(i[1]) >= t_crit:
+            # interpolation module, step=int_step
+                t1, t2 = (int(i[1] - 60), int(i[1]))
+                for j in range(int(60/int_step)):
+                    interpolated = t1 + (t2 - t1) / 60 * int_step * j
+                    if  interpolated >= t_crit:
+                        return int(i[0]) + j * 5
+        return 0              
+        
     def get_results(self, n_sampl):
 
-        # randomize functions are out of this class, they are recalled in CreateOZN() class
+        # randomize functions are out of this class, they are just recalled in CreateOZN() class
 
         chdir(self.paths[2])
         RunSim(*self.paths[:2], self.paths[3]).open_ozone()
 
         # !!!this is main loop for stochastic analyses!!!
         # n_sampl is quantity of repetitions
-        for i in range(n_sampl):
+        for i in range(int(n_sampl)):
+            print('')
+            print('Simulation #{}'.format(i))
             try:
                 chdir(self.paths[2])
-                CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
-
+                element_type = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
+                
+                # code for checking probability of collapse
+                #if element_type == 1:
+                #    print('it is beam, I skip it!')
+                #    self.results.append((0,0,1))
+                #    continue
+                
                 RunSim(*self.paths[:2], self.paths[3]).run_simulation()
                 time.sleep(1)
 
                 # writing results to table
-                self.results.append((self.choose_max(), self.choose_crit(),))
+                self.results.append((self.choose_max(), self.choose_crit(), element_type))
                 print(self.results[len(self.results) - 1])
             except (KeyError, TypeError, ValueError):
                 print('An error occured, simulation passed.')
+            
+            # exporting results every 200s
+            if (i+1) % 200 == 0:
+                chdir(self.paths[1])
+                Export(self.results).csv_write('stoch_res')
+                self.results.clear()
 
         # safe closing code:
         RunSim(*self.paths[:2], self.paths[3]).close_ozn()
 
         # add headers to results table columns
-        self.results.insert(0, ('MaxTemp_C_degree', 'CriticalTime_min'))
+        self.results.insert(0, ('MaxTemp_C_degree', 'CriticalTime_min', 'TypeOfElement'))
 
         # exporting results
-        Export(self.results).csv_write('stoch_res')
+        # chdir(self.paths[1])
+        # Export(self.results).csv_write('stoch_res')
         # Export(self.results).sql_write()
 
         # creating distribution table
@@ -351,58 +373,8 @@ class Charting:
         self.config_path = config_path
         self.results = results_tab
 
-    # def plot_single(self):
-    #     # fix func to new architecture
-    #     fig, axes = plt.subplots()
-    #     # x, y = zip(*steel_temp)
-    #     new_x = list(x)
-    #     new_y = list(y)
-    #
-    #     print('max temperatur:  ', max(*new_y), '°C at ', new_x[new_y.index(max(*new_y))], 's')
-    #     plt.axis([0, max(*new_x)*1.1, 0, max(*new_y)*1.1])
-    #     axes.set(xlabel='time [s]', ylabel='temperature (°C)', title='Steel temperature')
-    #     axes.plot(new_x, new_y, 'ro-')
-    #     axes.grid()
-    #     chdir('D:\ozone_results')
-    #     fig.savefig("stt.png")
-    #     plt.show()
-
-    # def max3d(self):
-    #     # fix func to new architecture
-    #
-    #     fig = plt.figure()
-    #     ax = Axes3D(fig)
-    #     x, y, z = zip(*self.results)
-    #
-    #     dim_x = list(x).count(x[0])
-    #     dim_y = list(y).count(y[0])
-    #     X = []
-    #     Y = []
-    #     Z = []
-    #
-    #     for i in range(dim_y):
-    #         X.append(list(x[i * dim_x:(i + 1) * dim_x]))
-    #     for i in range(dim_y):
-    #         Y.append(list(y[i * dim_x:(i + 1) * dim_x]))
-    #     [Z.append(list(z)[i * dim_x:(i + 1) * dim_x]) for i in range(dim_y)]
-    #
-    #     ax.scatter(np.array(X), np.array(Y), np.array(Z), cmap=cm.coolwarm,
-    #                linewidth=0, antialiased=False)
-    #
-    #     xAxisLine = ((min(x), max(x)), (0, 0), (max(z), max(z)))
-    #     ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'black')
-    #     yAxisLine = ((0, 0), (min(y), max(y)), (max(z), max(z)))
-    #     ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'black')
-    #
-    #     ax.set_xlabel("X - fire")
-    #     ax.set_ylabel("Y - fire")
-    #     ax.set_zlabel("max temperature")
-    #     ax.set_title("maximum temperature while fire axes are changing")
-    #
-    #     plt.show()
-
     def distribution(self):
-        temp, time = zip(*self.results[1:])
+        temp, time, foo = zip(*self.results[1:])
         time_list = list(time)
         probs = []
         times = []
@@ -432,16 +404,6 @@ class Charting:
 
         return [[no_collapse], times, probs]
 
-    # aim of test 1 is to check how cross-section temperature is changing along column
-    # def test1_charts(self):
-    #     # fix func to new architecture
-    #     z, temp = zip(*self.results)
-    #     plt.scatter(z, temp)
-    #     plt.xlabel('height')
-    #     plt.ylabel('temperature')
-    #     plt.grid(True)
-    #     plt.show()
-
 
 '''exporting results to SQLite database'''
 
@@ -470,12 +432,12 @@ class Export:
     def csv_write(self, title):
         writelist = []
 
-        writelist.append('{},{},{}\n'.format('', *self.res_tab[0]))
+        #writelist.append('{},{},{},{}\n'.format('', *self.res_tab[0]))
 
-        for i in self.res_tab[1:]:
-            writelist.append('{},{},{}\n'.format(len(writelist) - 1, *i))
+        for i in self.res_tab:
+            writelist.append('{},{},{}\n'.format(*i))
 
-        with open('{}.csv'.format(title), 'w') as file:
+        with open('{}.csv'.format(title), 'a+') as file:
             file.writelines(writelist)
         print('results has been written to CSV file')
 
@@ -503,30 +465,60 @@ def random_position(xmax, ymax):
     return fire
 
 
-def leakage_fire(a_min, a_max):
-    area = np.random.randint(a_min, a_max)
+def leakage_fire(title, t_end, only_mass=False):
+    with open('{}.ful'.format(title)) as file:
+        fuel_prop = file.readlines()[1].split(',')
+    
+	# random mass of fuel
+    try:
+        mass = np.random.randint(int(fuel_prop[5]), int(fuel_prop[6]))
+    except ValueError:
+        mass = int(fuel_prop[5])
 
-    mr = 0.029              # [kg/m2/s] - mass lose rate
-    qc = 20                 # [MJ/kg] - heat of combustion
-    hrr = qc * mr * area    # [MW] - heat release rate
-    am_index = 0.3          # m2/kg - area of leakage to mass of fuel
-    time_end = int(1 / (am_index * mr))
+    # random area of leakage
+    if only_mass:
+        area_ = mass * 0.03  #0.019 # glycerol # 0.03 methanol leakage
+        area = np.random.randint(area_*0.9*100, area_*1.1*100)/100
+    else:
+        try:
+            area = np.random.randint(int(fuel_prop[3]), int(fuel_prop[4]))
+        except ValueError:
+            area = int(fuel_prop[3])
+            
+    if area < 0.28:
+        ml_rate = np.random.randint(0.015*9000, 0.015*11000)/10000
+    elif area < 7.07:
+        ml_rate = np.random.randint(0.022*9000, 0.022*11000)/10000
+    else:
+        ml_rate = np.random.randint(0.029*9000, 0.029*11000)/10000
+        
+    print('mass loss rate = {}'.format(ml_rate))
+    hrr_ = float(fuel_prop[1]) * ml_rate * area    # [MW] - heat release rate
+    hrr = np.random.randint(int(hrr_*0.8*100), int(hrr_*1.2*100))/100
+    
+    time_end = mass / ml_rate / area
+    if time_end > t_end:
+        time_end = t_end
+        hrr_list = [0, hrr, time_end/60, hrr]
+    else:
+        hrr_list = [0, hrr, time_end/60, hrr]
+        hrr_list.extend([hrr_list[-2] + 1/6, 0,  t_end/60, 0])
 
-    hrr_list = [0, 0]
-    for i in range(10, time_end, 10):
-        hrr_list.extend([i, hrr])
-    hrr_list.extend([hrr_list[-2] + 10, 0])
-    print('HRR = {}kW'.format(hrr))
+    print('HRR = {}MW'.format(hrr))
 
-    return hrr_list, area
+    fuel_h = round(1/float(fuel_prop[2])/float(fuel_prop[5]), 2)
+
+    return hrr_list, area, fuel_h
 
 
 if __name__ == '__main__':
-    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\glic_0', 'D:\CR_qsync\ED_\ '[:-1] +\
-                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\glic_0\config', 'glic_0'
+    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\estr_10', 'D:\CR_qsync\ED_\ '[:-1] +\
+                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\estr_10\config', 'estr_10'
+
     linux_paths = '/mnt/hgfs/ozone_src_shared', '/mnt/hgfs/ozone_results_shared', '/mnt/hgfs/ozone_plug_shared/config',\
                   's190330'
                     # OZone program folder, results folder, config folder, simulation name
     # OS to check
 
-    Main(windows_paths).get_results(3)
+    Main(windows_paths).get_results(argv[1])
+    # print(Main(windows_paths).choose_crit())
