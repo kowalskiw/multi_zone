@@ -3,6 +3,8 @@ import json as js
 from pynput.keyboard import Key, Controller
 import time
 import matplotlib.pyplot as plt
+import seaborn as sns
+from pandas import read_csv as rcsv
 from sys import argv
 import numpy as np
 import sqlite3 as sql
@@ -102,23 +104,9 @@ class CreateOZN:
         return ext
 
     def fire(self):
-        # this is for user defined fire
-        #            tab_new = []
-        #     with open(self.files[8], 'r') as file:
-        #         fire = file.readlines()
-        #     tab_new.extend(fire[:10])
-        #     max_area = int(fire[2][:2])
-        #     comb_eff = 0.8
-        #     comb_heat = float(fire[7][:-1])
-        #     max_hrr = float(fire[-1].split()[1])
-        #
-        #     for line in fire[10:]:
-        #         time = float(line.split()[0])   # it may be easier way
-        #         hrr = float(line.split()[1])
-        #         mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
-        #         area = round(max_area*hrr/max_hrr, ndigits=2)
-        #         tab_new.extend([str(time) + '\n', str(hrr) + '\n', str(mass_flux) + '\n', str(area) + '\n'])
-        hrr, area, height = leakage_fire(self.sim_name, int(self.parameters()[6][:-1]), only_mass=False)
+        
+        # there is proper randomizing function called below (i.e. pool_fire())
+        hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), only_mass=False)
         h, x, y = self.geom()[2:5]
         diam = round(2*np.sqrt(area/np.pi), 2)
         tab_new = []
@@ -139,7 +127,6 @@ class CreateOZN:
         if self.element_type == 0:
             tab_new[3] = '0\n'  # overwriting height of measures
         tab_new.insert(9, '{}\n'.format(len(hrr)/2))
-
 
         return tab_new
 
@@ -162,7 +149,7 @@ class CreateOZN:
         dx = nearest(xf, elements[str(round(yf + dy, 1))])
 
         print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
-        print('Diameter: ', f_d, 'Doubled distance from element: ', 2*(dx*dx + dy*dy)**0.5)
+        print('Diameter: {}  Radius: {}  Distance: {}'.format(f_d, f_d/2, 2*(dx*dx + dy*dy)**0.5))
 
         if f_d > 2*(dx*dx + dy*dy)**0.5:
             print('there is a column considered')
@@ -234,10 +221,10 @@ class RunSim:
         time.sleep(0.5)
         self.keys.press(Key.right)
         self.keys.press(Key.enter)
-        # time.sleep(7*self.hware_rate)
+        time.sleep(7*self.hware_rate)
 
         # linux code
-        time.sleep(7*self.hware_rate)
+        # time.sleep(7*self.hware_rate)
         # with self.keys.pressed(Key.alt):                # OS to check
         #     self.keys.press(Key.tab)
         print('OZone3 is running')
@@ -304,7 +291,7 @@ class Main:
         
         for i in stt:
             if int(i[1]) >= t_crit:
-            # interpolation module, step=int_step
+            # linear interpolation module, step of interpolation =int_step
                 t1, t2 = (int(i[1] - 60), int(i[1]))
                 for j in range(int(60/int_step)):
                     interpolated = t1 + (t2 - t1) / 60 * int_step * j
@@ -314,7 +301,7 @@ class Main:
         
     def get_results(self, n_sampl):
 
-        # randomize functions are out of this class, they are just recalled in CreateOZN() class
+        # randomize functions are out of this class, they are just recalled in CreateOZN.fire()
 
         chdir(self.paths[2])
         RunSim(*self.paths[:2], self.paths[3]).open_ozone()
@@ -328,7 +315,7 @@ class Main:
                 chdir(self.paths[2])
                 element_type = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
                 
-                # code for checking probability of collapse
+                # code for checking probability of collapse only
                 #if element_type == 1:
                 #    print('it is beam, I skip it!')
                 #    self.results.append((0,0,1))
@@ -403,7 +390,25 @@ class Charting:
         plt.show()
 
         return [[no_collapse], times, probs]
+    
+    # NOT FINISHED - adapt function below to script structure
+    def ak_distr(self):
+        t_crit = 526
 
+        data = rcsv(sys.argv[1], sep=';')
+        prob = len(data.t_max[data.t_max < t_crit])/len(data.t_max)
+        plt.figure(figsize=(12,4))
+        plt.subplot(121)
+        sns_plot = sns.distplot(data.t_max, hist_kws={'cumulative': True}, kde_kws={'cumulative': True, 'label': 'Dystrybuanta'},axlabel='Temperatura [C]')
+
+        print(np.std(data.t_max))
+        print(np.std(data.time_crit[data.time_crit > 0]))
+
+        plt.axvline(x=t_crit, color='r')
+        plt.axhline(y=prob, color='r')
+        plt.subplot(122)
+        sns_plot = sns.distplot(data.time_crit[data.time_crit > 0], hist_kws={'cumulative': True}, kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Czas [s]')
+        plt.savefig('dist_p.png')
 
 '''exporting results to SQLite database'''
 
@@ -428,6 +433,12 @@ class Export:
         conn.commit()
         # conn.close()
         print('results has been written to SQLite database')
+    
+    def sql_read(self):
+        conn = self.__sql_connect()
+        conn.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
+        # conn.execute("SELECT * FROM results_ozone")
+        print(*conn.cursor().fetchall())
 
     def csv_write(self, title):
         writelist = []
@@ -441,14 +452,9 @@ class Export:
             file.writelines(writelist)
         print('results has been written to CSV file')
 
-    def sql_read(self):
-        conn = self.__sql_connect()
-        conn.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
-        # conn.execute("SELECT * FROM results_ozone")
-        print(*conn.cursor().fetchall())
+    
 
-
-"""calculating critical temperature according to equation from Eurocode 3"""
+'''calculating critical temperature according to equation from Eurocode 3'''
 
 
 def temp_crit(coef):
@@ -465,7 +471,9 @@ def random_position(xmax, ymax):
     return fire
 
 
-def leakage_fire(title, t_end, only_mass=False):
+'''fire randomization functions'''
+
+def pool_fire(title, t_end, only_mass=False):
     with open('{}.ful'.format(title)) as file:
         fuel_prop = file.readlines()[1].split(',')
     
@@ -510,6 +518,23 @@ def leakage_fire(title, t_end, only_mass=False):
 
     return hrr_list, area, fuel_h
 
+def user_def_fire():
+     with open(self.files[8], 'r') as file:
+        fire = file.readlines()
+
+     tab_new.extend(fire[:10])
+     max_area = int(fire[2][:2])
+     comb_eff = 0.8
+     comb_heat = float(fire[7][:-1])
+     max_hrr = float(fire[-1].split()[1])
+     
+     for line in fire[10:]:
+         time = float(line.split()[0])   # it may be easier way
+         hrr = float(line.split()[1])
+         mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
+         area = round(max_area*hrr/max_hrr, ndigits=2)
+         
+     return hrr, mass_flux, area
 
 if __name__ == '__main__':
     windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\estr_10', 'D:\CR_qsync\ED_\ '[:-1] +\
