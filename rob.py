@@ -18,6 +18,7 @@ class CreateOZN:
         self.results_path = results_path
         self.sim_name = sim_name
         self.element_type = 0       # 0 - column, 1 - beam
+        self.to_write = [self.element_type]
 
     def write_ozn(self):
         tab_new = []
@@ -45,7 +46,7 @@ class CreateOZN:
 
             ozn_file.writelines(tab_new)
             print('OZone simulation file (.ozn) has been written!')
-        return self.element_type
+        return self.to_write
 
     def geom(self):
         with open(self.sim_name+'.geom', 'r') as file:
@@ -107,8 +108,11 @@ class CreateOZN:
         
         # there is proper randomizing function called below (i.e. pool_fire())
         hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), only_mass=False)
+        self.to_write.append(hrr[3])
+
         h, x, y = self.geom()[2:5]
         diam = round(2*np.sqrt(area/np.pi), 2)
+
         tab_new = []
         with open(self.sim_name + '.udf', 'r') as file:
             fire = file.readlines()
@@ -149,7 +153,10 @@ class CreateOZN:
         dx = nearest(xf, elements[str(round(yf + dy, 1))])
 
         print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
-        print('Diameter: {}  Radius: {}  Distance: {}'.format(f_d, f_d/2, 2*(dx*dx + dy*dy)**0.5))
+        rad = f_d/2
+        dist = 2*(dx*dx + dy*dy)**0.5
+        self.to_write.extend([rad, dist])
+        print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
 
         if f_d > 2*(dx*dx + dy*dy)**0.5:
             print('there is a column considered')
@@ -267,6 +274,8 @@ class Main:
     def __init__(self, paths):
         self.paths = paths
         self.results = []
+        self.t_crit = temp_crit(0.7)
+        self.save_samp = 2
 
     def add_data(self):
         steel_temp = []
@@ -283,19 +292,18 @@ class Main:
         return float(max(temp))
 
     def choose_crit(self):
-        t_crit = temp_crit(0.7)
         stt = self.add_data()
         int_step = 5
 
         print(stt)
         
         for i in stt:
-            if int(i[1]) >= t_crit:
+            if int(i[1]) >= self.t_crit:
             # linear interpolation module, step of interpolation =int_step
                 t1, t2 = (int(i[1] - 60), int(i[1]))
                 for j in range(int(60/int_step)):
                     interpolated = t1 + (t2 - t1) / 60 * int_step * j
-                    if  interpolated >= t_crit:
+                    if  interpolated >= self.t_crit:
                         return int(i[0]) + j * 5
         return 0              
         
@@ -306,6 +314,9 @@ class Main:
         chdir(self.paths[2])
         RunSim(*self.paths[:2], self.paths[3]).open_ozone()
 
+        # add headers to results table columns
+        self.results.insert(0, ['t_max', 'time_crit', 'element', 'radius', 'distance', 'hrr'])
+
         # !!!this is main loop for stochastic analyses!!!
         # n_sampl is quantity of repetitions
         for i in range(int(n_sampl)):
@@ -313,25 +324,19 @@ class Main:
             print('Simulation #{}'.format(i))
             try:
                 chdir(self.paths[2])
-                element_type = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
-                
-                # code for checking probability of collapse only
-                #if element_type == 1:
-                #    print('it is beam, I skip it!')
-                #    self.results.append((0,0,1))
-                #    continue
+                to_write = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
                 
                 RunSim(*self.paths[:2], self.paths[3]).run_simulation()
                 time.sleep(1)
 
-                # writing results to table
-                self.results.append((self.choose_max(), self.choose_crit(), element_type))
+                # writing results to results table
+                self.results.append([self.choose_max(), self.choose_crit(), *to_write])
                 print(self.results[len(self.results) - 1])
             except (KeyError, TypeError, ValueError):
                 print('An error occured, simulation passed.')
             
-            # exporting results every 200s
-            if (i+1) % 200 == 0:
+            # exporting results every self.save_samp seconds
+            if (i+1) % self.save_samp == 0:
                 chdir(self.paths[1])
                 Export(self.results).csv_write('stoch_res')
                 self.results.clear()
@@ -339,16 +344,14 @@ class Main:
         # safe closing code:
         RunSim(*self.paths[:2], self.paths[3]).close_ozn()
 
-        # add headers to results table columns
-        self.results.insert(0, ('MaxTemp_C_degree', 'CriticalTime_min', 'TypeOfElement'))
-
         # exporting results
         # chdir(self.paths[1])
         # Export(self.results).csv_write('stoch_res')
         # Export(self.results).sql_write()
 
         # creating distribution table
-        Charting(self.paths[2], self.results).distribution()
+        Charting(self.paths[1]).ak_distr('stoch_res.csv', self.t_crit)
+
         # there is need to make Export().csv_write() function more versatile
 
 
@@ -356,9 +359,9 @@ class Main:
 
 
 class Charting:
-    def __init__(self, config_path, results_tab):
-        self.config_path = config_path
-        self.results = results_tab
+    def __init__(self, res_path):
+        self.results = []
+        chdir(res_path)
 
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
@@ -387,28 +390,27 @@ class Charting:
         fig, ax = plt.subplots()
         ax.hist(times, density=True, cumulative=False, histtype='stepfilled')
 
-        plt.show()
+        plt.savefig('distr_wk')
 
         return [[no_collapse], times, probs]
-    
-    # NOT FINISHED - adapt function below to script structure
-    def ak_distr(self):
-        t_crit = 526
 
-        data = rcsv(sys.argv[1], sep=';')
+    def ak_distr(self, file_title, t_crit):
+
+        data = rcsv(file_title, sep=',')
+        print(data)
         prob = len(data.t_max[data.t_max < t_crit])/len(data.t_max)
-        plt.figure(figsize=(12,4))
+        plt.figure(figsize=(12, 4))
         plt.subplot(121)
-        sns_plot = sns.distplot(data.t_max, hist_kws={'cumulative': True}, kde_kws={'cumulative': True, 'label': 'Dystrybuanta'},axlabel='Temperatura [C]')
-
-        print(np.std(data.t_max))
-        print(np.std(data.time_crit[data.time_crit > 0]))
+        sns_plot = sns.distplot(data.t_max, hist_kws={'cumulative': True},
+                                kde_kws={'cumulative': True, 'label': 'Dystrybuanta'},axlabel='Temperatura [°C]')
 
         plt.axvline(x=t_crit, color='r')
         plt.axhline(y=prob, color='r')
         plt.subplot(122)
-        sns_plot = sns.distplot(data.time_crit[data.time_crit > 0], hist_kws={'cumulative': True}, kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Czas [s]')
+        sns_plot = sns.distplot(data.time_crit[data.time_crit > 0], hist_kws={'cumulative': True},
+                                kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Czas [s]')
         plt.savefig('dist_p.png')
+
 
 '''exporting results to SQLite database'''
 
@@ -443,16 +445,16 @@ class Export:
     def csv_write(self, title):
         writelist = []
 
-        #writelist.append('{},{},{},{}\n'.format('', *self.res_tab[0]))
-
+        print(self.res_tab)
         for i in self.res_tab:
-            writelist.append('{},{},{}\n'.format(*i))
+            for j in range(len(i)):
+                i[j] = str(i[j])
+            writelist.append(','.join(i) + '\n')
 
         with open('{}.csv'.format(title), 'a+') as file:
             file.writelines(writelist)
         print('results has been written to CSV file')
 
-    
 
 '''calculating critical temperature according to equation from Eurocode 3'''
 
@@ -473,11 +475,12 @@ def random_position(xmax, ymax):
 
 '''fire randomization functions'''
 
+
 def pool_fire(title, t_end, only_mass=False):
     with open('{}.ful'.format(title)) as file:
         fuel_prop = file.readlines()[1].split(',')
     
-	# random mass of fuel
+    # random mass of fuel
     try:
         mass = np.random.randint(int(fuel_prop[5]), int(fuel_prop[6]))
     except ValueError:
@@ -518,8 +521,10 @@ def pool_fire(title, t_end, only_mass=False):
 
     return hrr_list, area, fuel_h
 
+
 def user_def_fire():
-     with open(self.files[8], 'r') as file:
+     tab_new = []
+     with open('udf_file', 'r') as file:
         fire = file.readlines()
 
      tab_new.extend(fire[:10])
@@ -536,9 +541,10 @@ def user_def_fire():
          
      return hrr, mass_flux, area
 
+
 if __name__ == '__main__':
-    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\estr_10', 'D:\CR_qsync\ED_\ '[:-1] +\
-                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\estr_10\config', 'estr_10'
+    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\glic_0', 'D:\CR_qsync\ED_\ '[:-1] +\
+                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\glic_0\config', 'glic_0'
 
     linux_paths = '/mnt/hgfs/ozone_src_shared', '/mnt/hgfs/ozone_results_shared', '/mnt/hgfs/ozone_plug_shared/config',\
                   's190330'
@@ -546,4 +552,3 @@ if __name__ == '__main__':
     # OS to check
 
     Main(windows_paths).get_results(argv[1])
-    # print(Main(windows_paths).choose_crit())
