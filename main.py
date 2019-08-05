@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas import read_csv as rcsv
 from sys import argv
-import numpy as np
+from numpy import sqrt, random, log, pi
 import sqlite3 as sql
 
 
@@ -40,8 +40,7 @@ class CreateOZN:
         with open(self.title + '.ozn', 'w') as ozn_file:
             ozn_file.writelines(['Revision\n', '304\n', 'Name\n', self.title + '\n'])
 
-
-            # shorter code below do not working, why?
+            # shorter code below does not work why?
             # [tab_new.extend(i) for i in [self.geom(), self.material, self.openings(), self.ceiling(),
             #                                   self.smoke_extractors(), self.fire(), self.strategy(), self.profile()]]
 
@@ -117,7 +116,7 @@ class CreateOZN:
         self.to_write.append(hrr[3])
 
         h, x, y = self.geom()[2:5]
-        diam = round(2*np.sqrt(area/np.pi), 2)
+        diam = round(2*sqrt(area/pi), 2)
 
         tab_new = []
         with open(self.sim_name + '.udf', 'r') as file:
@@ -404,11 +403,11 @@ class Charting:
 
         data = rcsv(file_title, sep=',')
         print(data)
-        prob = len(data.t_max[data.t_max < t_crit])/len(data.t_max)
+        prob = len(data.t_max[data.t_max < float(t_crit)])/len(data.t_max)
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
         sns_plot = sns.distplot(data.t_max, hist_kws={'cumulative': True},
-                                kde_kws={'cumulative': True, 'label': 'Dystrybuanta'},axlabel='Temperatura [°C]')
+                                kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Temperatura [°C]')
 
         plt.axvline(x=t_crit, color='r')
         plt.axhline(y=prob, color='r')
@@ -466,7 +465,7 @@ class Export:
 
 
 def temp_crit(coef):
-    return 39.19 * np.log(1 / 0.9674 / coef ** 3.833 - 1) + 482
+    return 39.19 * log(1 / 0.9674 / coef ** 3.833 - 1) + 482
 
 
 '''returns random (between given boundaries) fire parameters'''
@@ -474,7 +473,7 @@ def temp_crit(coef):
 
 def random_position(xmax, ymax):
     fire = []
-    [fire.append(np.random.randint(0, int(10 * float(i)))/10) for i in (xmax, ymax)]
+    [fire.append(random.randint(0, int(10 * float(i)))/10) for i in (xmax, ymax)]
 
     return fire
 
@@ -488,33 +487,33 @@ def pool_fire(title, t_end, max_a, only_mass=False):
     
     # random mass of fuel
     try:
-        mass = np.random.randint(int(fuel_prop[5]), int(fuel_prop[6]))
+        mass = triangular(int(fuel_prop[5]), int(fuel_prop[6]))
     except ValueError:
         mass = int(fuel_prop[5])
 
     # random area of leakage
     if only_mass:
         area_ = mass * 0.03  #0.019 # glycerol # 0.03 methanol leakage
-        area = np.random.randint(area_*0.9*100, area_*1.1*100)/100
+        area = triangular(area_*0.9*100, area_*1.1*100)/100
     else:
         try:
-            area = np.random.randint(int(fuel_prop[3]), int(fuel_prop[4]))
+            area = triangular(int(fuel_prop[3]), int(fuel_prop[4]))
         except ValueError:
             area = int(fuel_prop[3])
             
     if area < 0.28:
-        ml_rate = np.random.randint(0.015*9000, 0.015*11000)/10000
+        ml_rate = triangular(0.015*.9, 0.015*1.1)
     elif area < 7.07:
-        ml_rate = np.random.randint(0.022*9000, 0.022*11000)/10000
+        ml_rate = triangular(0.022*.9, 0.022*1.1)
     else:
-        ml_rate = np.random.randint(0.029*9000, 0.029*11000)/10000
+        ml_rate = triangular(0.029*.9, 0.029*1.1)
 
     if max_a < area:
         area = max_a
 
     print('mass loss rate = {}'.format(ml_rate))
     hrr_ = float(fuel_prop[1]) * ml_rate * area    # [MW] - heat release rate
-    hrr = np.random.randint(int(hrr_*0.8*100), int(hrr_*1.2*100))/100
+    hrr = triangular(hrr_*.8, hrr_*1.2)
     
     time_end = mass / ml_rate / area
     if time_end > t_end:
@@ -553,10 +552,16 @@ def user_def_fire():
      return hrr, mass_flux, area
 
 
+def triangular(left, right, mode=False):
+    if not mode:
+        mode = (right - left) / 3 + left
+    return random.triangular(left, mode, right)
+
+
 if __name__ == '__main__':
     windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\glic_1', 'D:\CR_qsync\ED_\ '[:-1] +\
                     '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\estr_10\config', 'estr_10'
 
-                    # OZone program folder, results folder, config folder, simulation name
+# OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
