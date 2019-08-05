@@ -19,6 +19,7 @@ class CreateOZN:
         self.sim_name = sim_name
         self.element_type = 0       # 0 - column, 1 - beam
         self.to_write = [self.element_type]
+        self.floor = []
 
     def write_ozn(self):
         tab_new = []
@@ -52,11 +53,14 @@ class CreateOZN:
         with open(self.sim_name+'.geom', 'r') as file:
             geom_tab = file.readlines()
 
+        [self.floor.append(float(i[:-1])) for i in geom_tab[3:5]]
+
         return geom_tab[:6]
 
     def elements_place(self):
         with open(self.sim_name+'.xel', 'r') as file:
-            return dict(js.load(file))
+            construction = dict(js.load(file))
+        return construction
 
     def material(self):
         tab_new = []
@@ -105,9 +109,11 @@ class CreateOZN:
         return ext
 
     def fire(self):
-        
+
+        floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
+
         # there is proper randomizing function called below (i.e. pool_fire())
-        hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), only_mass=False)
+        hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), floor_size, only_mass=False)
         self.to_write.append(hrr[3])
 
         h, x, y = self.geom()[2:5]
@@ -322,18 +328,18 @@ class Main:
         for i in range(int(n_sampl)):
             print('')
             print('Simulation #{}'.format(i))
-            try:
-                chdir(self.paths[2])
-                to_write = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
-                
-                RunSim(*self.paths[:2], self.paths[3]).run_simulation()
-                time.sleep(1)
+            # try:
+            chdir(self.paths[2])
+            to_write = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
 
-                # writing results to results table
-                self.results.append([self.choose_max(), self.choose_crit(), *to_write])
-                print(self.results[len(self.results) - 1])
-            except (KeyError, TypeError, ValueError):
-                print('An error occured, simulation passed.')
+            RunSim(*self.paths[:2], self.paths[3]).run_simulation()
+            time.sleep(1)
+
+            # writing results to results table
+            self.results.append([self.choose_max(), self.choose_crit(), *to_write])
+            print(self.results[len(self.results) - 1])
+            # except (KeyError, TypeError, ValueError):
+            #     print('An error occured, simulation passed.')
             
             # exporting results every self.save_samp seconds
             if (i+1) % self.save_samp == 0:
@@ -476,7 +482,7 @@ def random_position(xmax, ymax):
 '''fire randomization functions'''
 
 
-def pool_fire(title, t_end, only_mass=False):
+def pool_fire(title, t_end, max_a, only_mass=False):
     with open('{}.ful'.format(title)) as file:
         fuel_prop = file.readlines()[1].split(',')
     
@@ -502,7 +508,10 @@ def pool_fire(title, t_end, only_mass=False):
         ml_rate = np.random.randint(0.022*9000, 0.022*11000)/10000
     else:
         ml_rate = np.random.randint(0.029*9000, 0.029*11000)/10000
-        
+
+    if max_a < area:
+        area = max_a
+
     print('mass loss rate = {}'.format(ml_rate))
     hrr_ = float(fuel_prop[1]) * ml_rate * area    # [MW] - heat release rate
     hrr = np.random.randint(int(hrr_*0.8*100), int(hrr_*1.2*100))/100
@@ -512,6 +521,8 @@ def pool_fire(title, t_end, only_mass=False):
         time_end = t_end
         hrr_list = [0, hrr, time_end/60, hrr]
     else:
+        if time_end < 60:
+            time_end = 60
         hrr_list = [0, hrr, time_end/60, hrr]
         hrr_list.extend([hrr_list[-2] + 1/6, 0,  t_end/60, 0])
 
@@ -543,12 +554,9 @@ def user_def_fire():
 
 
 if __name__ == '__main__':
-    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\glic_0', 'D:\CR_qsync\ED_\ '[:-1] +\
-                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\glic_0\config', 'glic_0'
+    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\glic_1', 'D:\CR_qsync\ED_\ '[:-1] +\
+                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\estr_10\config', 'estr_10'
 
-    linux_paths = '/mnt/hgfs/ozone_src_shared', '/mnt/hgfs/ozone_results_shared', '/mnt/hgfs/ozone_plug_shared/config',\
-                  's190330'
                     # OZone program folder, results folder, config folder, simulation name
-    # OS to check
 
     Main(windows_paths).get_results(argv[1])
