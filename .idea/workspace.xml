@@ -2,8 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="52cf79ce-5ab2-4c46-b37a-9e3469ce4fd7" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/codeStyles/Project.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/stt.png" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -11,40 +14,15 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/main.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="60">
-              <caret line="513" lean-forward="true" selection-start-line="513" selection-end-line="513" />
-              <folding>
-                <element signature="e#0#44#0" expanded="true" />
-                <element signature="e#12046#12927#0" />
-                <element signature="e#12982#13698#0" />
-                <element signature="e#13862#13984#0" />
-                <element signature="e#14019#14350#0" />
-                <element signature="e#14388#14590#0" />
-                <element signature="e#15247#15358#0" />
-                <element signature="e#16952#17497#0" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>get</find>
-      <find>fire(se</find>
-      <find>write</find>
-      <find>neares</find>
-      <find>get_res</find>
-      <find>self.ozone_path</find>
-      <find>path</find>
-      <find>:1</find>
-      <find>\</find>
       <find>OS</find>
       <find>geom()</find>
       <find>geom(</find>
@@ -55,62 +33,48 @@
       <find>hwar</find>
       <find>prin</find>
       <find>profi</find>
-      <find>fire_place</find>
       <find>random_</find>
       <find>leak</find>
       <find>temp_crit</find>
       <find>choose_crit</find>
       <find>config_path</find>
       <find>CreateOZN</find>
-      <find>element_type</find>
       <find>t_ma</find>
       <find>elements_place</find>
       <find>strat</find>
+      <find>rand</find>
+      <find>np</find>
+      <find>fire</find>
+      <find>b'st\\\\\</find>
+      <find>element_type</find>
+      <find>to_write[0]</find>
+      <find>Crea</find>
+      <find>to_write</find>
+      <find>fire_</find>
+      <find>fire_place</find>
+      <find>chdir</find>
     </findStrings>
     <replaceStrings>
       <replace>steel_temp</replace>
+      <replace>to_write[0]</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="IdeDocumentHistory">
-    <option name="CHANGED_PATHS">
-      <list>
-        <option value="$PROJECT_DIR$/rob.py" />
-        <option value="$PROJECT_DIR$/main.py" />
-      </list>
-    </option>
-  </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="170" />
-    <option name="y" value="91" />
-    <option name="width" value="1026" />
-    <option name="height" value="546" />
-  </component>
-  <component name="ProjectView">
-    <navigator proportions="" version="1">
-      <foldersAlwaysOnTop value="true" />
-    </navigator>
-    <panes>
-      <pane id="Scope" />
-      <pane id="ProjectPane">
-        <subPane>
-          <expand>
-            <path>
-              <item name="dlagita" type="b2602c69:ProjectViewProjectNode" />
-              <item name="dlagita" type="462c0819:PsiDirectoryNode" />
-            </path>
-          </expand>
-          <select />
-        </subPane>
-      </pane>
-    </panes>
+  <component name="ProjectId" id="1PBL9iaqLEAvWkH6bQBQ4wX6PJc" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
   </component>
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/main.py" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\CR\_zadania\_konstrukcje\dlagita" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -124,7 +88,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.main">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python">
       <module name="dlagita" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -138,7 +102,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
-      <option name="PARAMETERS" value="10" />
+      <option name="PARAMETERS" value="3" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -146,6 +110,31 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="rob" type="PythonConfigurationType" factoryName="Python">
+      <module name="dlagita" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Python37\python.exe" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/rob.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <list>
+      <item itemvalue="Python.rob" />
+      <item itemvalue="Python.main" />
+    </list>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -277,35 +266,22 @@
       <option name="project" value="LOCAL" />
       <updated>1561634111828</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="Domain error fixed&#10;&#10;Boundary values of fire's area and fire duration were set">
+      <created>1565011219873</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1565011219873</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Triangular randomization added&#10;&#10;np.random.triangular replaced np.random.randint, also imports from numpy were reduced to necessary ones">
+      <created>1565016259473</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1565016259473</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
-  </component>
-  <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
-    <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49918166" visible="true" weight="0.078125" />
-      <window_info id="Project Explorer" order="1" />
-      <window_info id="Structure" order="2" sideWeight="0.5008183" side_tool="true" weight="0.09821428" />
-      <window_info id="Favorites" order="3" side_tool="true" />
-      <window_info id="Job Explorer" order="4" />
-      <window_info id="DB Browser" order="5" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49947312" visible="true" weight="0.20294599" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.18003273" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Console" order="7" />
-      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3289689" />
-      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50052685" side_tool="true" weight="0.3336945" />
-      <window_info anchor="bottom" id="Version Control" order="10" weight="0.24052005" />
-      <window_info anchor="bottom" id="Python Console" order="11" />
-      <window_info anchor="bottom" id="DB Execution Console" order="12" />
-      <window_info anchor="right" id="Commander" order="0" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-    </layout>
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -313,20 +289,7 @@
         <entry key="MAIN">
           <value>
             <State>
-              <option name="RECENTLY_FILTERED_USER_GROUPS">
-                <collection />
-              </option>
-              <option name="RECENTLY_FILTERED_BRANCH_GROUPS">
-                <collection />
-              </option>
-              <option name="COLUMN_ORDER">
-                <list>
-                  <option value="0" />
-                  <option value="1" />
-                  <option value="2" />
-                  <option value="3" />
-                </list>
-              </option>
+              <option name="COLUMN_ORDER" />
             </State>
           </value>
         </entry>
@@ -364,42 +327,12 @@
     <MESSAGE value="rob.py - version for win10, main.py - linux (still with bugs); Charting.distribution() returns distribution of collapse times" />
     <MESSAGE value="Charting.distribution() method corrected" />
     <MESSAGE value="Prepared for pool fires - win10, charting repaired, randomization outside classes" />
-    <option name="LAST_COMMIT_MESSAGE" value="Prepared for pool fires - win10, charting repaired, randomization outside classes" />
+    <MESSAGE value="Domain error fixed&#10;&#10;Boundary values of fire's area and fire duration were set" />
+    <MESSAGE value="Triangular randomization added&#10;&#10;np.random.triangular replaced np.random.randint, also imports from numpy were reduced to necessary ones" />
+    <option name="LAST_COMMIT_MESSAGE" value="Triangular randomization added&#10;&#10;np.random.triangular replaced np.random.randint, also imports from numpy were reduced to necessary ones" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>511</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>512</line>
-          <option name="timeStamp" value="2" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>112</line>
-          <option name="timeStamp" value="3" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>62</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>61</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>55</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-      </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
           <properties notifyOnTerminate="true" exception="BaseException">
@@ -408,44 +341,5 @@
         </breakpoint>
       </default-breakpoints>
     </breakpoint-manager>
-  </component>
-  <component name="editorHistoryManager">
-    <entry file="file://C:/Python37/Lib/site-packages/matplotlib/axis.py" />
-    <entry file="file://$USER_HOME$/AppData/Local/Temp/surface3d_demo.py" />
-    <entry file="file://$USER_HOME$/PycharmProjects/wakacje/cam_log.py">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$USER_HOME$/.PyCharmCE2019.1/system/python_stubs/-1055577769/nt.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="227">
-          <caret line="89" column="4" selection-start-line="89" selection-start-column="4" selection-end-line="89" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/rob.py" />
-    <entry file="file://C:/Python37/Lib/site-packages/pandas/core/generic.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2118">
-          <caret line="5179" selection-start-line="5179" selection-end-line="5179" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/main.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="60">
-          <caret line="513" lean-forward="true" selection-start-line="513" selection-end-line="513" />
-          <folding>
-            <element signature="e#0#44#0" expanded="true" />
-            <element signature="e#12046#12927#0" />
-            <element signature="e#12982#13698#0" />
-            <element signature="e#13862#13984#0" />
-            <element signature="e#14019#14350#0" />
-            <element signature="e#14388#14590#0" />
-            <element signature="e#15247#15358#0" />
-            <element signature="e#16952#17497#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
   </component>
 </project>

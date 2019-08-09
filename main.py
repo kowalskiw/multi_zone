@@ -11,39 +11,25 @@ import sqlite3 as sql
 
 
 class CreateOZN:
-    def __init__(self, ozone_path, results_path, sim_name):
+    def __init__(self, ozone_path, results_path, config_path, sim_name):
+        chdir(config_path)
         self.files = listdir(getcwd())
         self.title = self.files[0].split('.')[0]
         self.ozone_path = ozone_path
         self.results_path = results_path
         self.sim_name = sim_name
-        self.element_type = 0       # 0 - column, 1 - beam
-        self.to_write = [self.element_type]
+        self.to_write = [0]     # 0 - column, 1 - beam
         self.floor = []
 
     def write_ozn(self):
         tab_new = []
-        tab_new.extend(self.geom())
-        tab_new.extend(self.material())
-        tab_new.extend(self.openings())
-        [tab_new.append('\n') for i in range(30)]
-        [tab_new.append('0\n') for i in range(6)]
-        tab_new.extend(self.ceiling())
-        tab_new.extend(self.smoke_extractors())
-        tab_new.extend(['0\n', '1.27\n'])
-        tab_new.extend(self.fire())
-        tab_new.extend(self.strategy())
-        tab_new.extend(self.parameters())
-        tab_new.extend(self.profile())
+        [tab_new.extend(i) for i in [self.geom(), self.material(), self.openings(), '\n'*30, '0\n'*6, self.ceiling(),
+                                     self.smoke_extractors(), ['0\n', '1.27\n'], self.fire(),self.strategy(),
+                                     self.parameters(), self.profile()]]
+
         chdir(self.results_path)
-        print('collecting data finished')
         with open(self.title + '.ozn', 'w') as ozn_file:
-            ozn_file.writelines(['Revision\n', '304\n', 'Name\n', self.title + '\n'])
-
-            # shorter code below does not work why?
-            # [tab_new.extend(i) for i in [self.geom(), self.material, self.openings(), self.ceiling(),
-            #                                   self.smoke_extractors(), self.fire(), self.strategy(), self.profile()]]
-
+            ozn_file.writelines(['Revision\n', ' 304\n', 'Name\n', self.title + '\n'])
             ozn_file.writelines(tab_new)
             print('OZone simulation file (.ozn) has been written!')
         return self.to_write
@@ -63,7 +49,7 @@ class CreateOZN:
 
     def material(self):
         tab_new = []
-        ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()    # OS to check
+        ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()
         with open(self.sim_name+'.mat', 'r') as file:
             my_mat = file.readlines()
 
@@ -112,7 +98,8 @@ class CreateOZN:
         floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
 
         # there is proper randomizing function called below (i.e. pool_fire())
-        hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), floor_size, only_mass=False)
+        # hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), floor_size, only_mass=False)
+        hrr, area, height = test_fire()
         self.to_write.append(hrr[3])
 
         h, x, y = self.geom()[2:5]
@@ -129,18 +116,21 @@ class CreateOZN:
             tab_new.append('{}\n'.format(i))
 
         # overwriting absolute positions with relative ones
-        xr, yr = self.fire_place(*random_position(x, y), diam, self.elements_place())
+        xf, yf = random_position(x, y)
+        self.to_write.append([xf, yf, diam])
+
+        xr, yr = self.fire_place(xf, yf, diam, self.elements_place())
         tab_new.insert(6, '{}\n'.format(diam))
         tab_new.insert(7, '{}\n'.format(round(xr, 2)))
         tab_new.insert(8, '{}\n'.format(round(yr, 2)))
-        if self.element_type == 0:
+        if self.to_write[0] == 0:
             tab_new[3] = '0\n'  # overwriting height of measures
         tab_new.insert(9, '{}\n'.format(len(hrr)/2))
 
         return tab_new
 
     # sets fire position relatively to the nearest element
-    def fire_place(self, xf, yf, f_d, elements):
+    def fire_place(self, xf, yf, f_d, elements, element=None):
         def nearest(src, tab):
             delta = 0
             for k in tab:
@@ -163,12 +153,12 @@ class CreateOZN:
         self.to_write.extend([rad, dist])
         print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
 
-        if f_d > 2*(dx*dx + dy*dy)**0.5:
+        if f_d > 2*(dx*dx + dy*dy)**0.5 or element == 'c':
             print('there is a column considered')
             return dx, dy
         else:
             print('there is a beam considered')
-            self.element_type = 1
+            self.to_write[0] = 1
             return 0, dy
 
     def strategy(self):
@@ -205,7 +195,7 @@ class CreateOZN:
             for t, p in prof_dict.items():
                 try:
                     tab_new.extend([str(list(prof_dict.keys()).index(t)) + '\n',
-                                    str(p.index(prof[3 + self.element_type][:-1])) + '\n'])
+                                    str(p.index(prof[3 + self.to_write[0]][:-1])) + '\n'])
                 except ValueError:
                     pass
 
@@ -219,26 +209,21 @@ class CreateOZN:
 
 
 class RunSim:
-    def __init__(self, ozone_path, results_path, sim_name):
+    def __init__(self, ozone_path, results_path, config_path, sim_name):
         self.ozone_path = ozone_path
-        # self.sim_path = results_path
-        self.sim_path = '{}\{}.ozn'.format(results_path, sim_name)  # OS to check
+        chdir(config_path)
+        self.sim_path = '{}\{}.ozn'.format(results_path, sim_name)
         self.keys = Controller()
         self.hware_rate = 1     # this ratio sets times of waiting for your machine response
 
     def open_ozone(self):
-        popen('{}\OZone.exe'.format(self.ozone_path))   # OS to check
+        popen('{}\OZone.exe'.format(self.ozone_path))
 
-        # # windows code
         time.sleep(0.5)
         self.keys.press(Key.right)
         self.keys.press(Key.enter)
         time.sleep(7*self.hware_rate)
 
-        # linux code
-        # time.sleep(7*self.hware_rate)
-        # with self.keys.pressed(Key.alt):                # OS to check
-        #     self.keys.press(Key.tab)
         print('OZone3 is running')
 
     def close_ozn(self):
@@ -280,11 +265,11 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(0.7)
-        self.save_samp = 2
+        self.save_samp = 1
 
     def add_data(self):
         steel_temp = []
-        with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:   # OS to check
+        with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:
             stt = file.readlines()
         for i in stt[2:]:
             steel_temp.append((float(i.split()[0]), float(i.split()[2])))
@@ -310,14 +295,21 @@ class Main:
                     interpolated = t1 + (t2 - t1) / 60 * int_step * j
                     if  interpolated >= self.t_crit:
                         return int(i[0]) + j * 5
-        return 0              
+        return 0
+
+    def single_sim(self, export_list):
+        RunSim(*self.paths).run_simulation()
+        time.sleep(1)
+
+        # writing results to results table
+        self.results.append([self.choose_max(), self.choose_crit(), *export_list])
+        print(self.results[len(self.results) - 1])
         
     def get_results(self, n_sampl):
 
         # randomize functions are out of this class, they are just recalled in CreateOZN.fire()
 
-        chdir(self.paths[2])
-        RunSim(*self.paths[:2], self.paths[3]).open_ozone()
+        RunSim(*self.paths).open_ozone()
 
         # add headers to results table columns
         self.results.insert(0, ['t_max', 'time_crit', 'element', 'radius', 'distance', 'hrr'])
@@ -325,48 +317,60 @@ class Main:
         # !!!this is main loop for stochastic analyses!!!
         # n_sampl is quantity of repetitions
         for i in range(int(n_sampl)):
-            print('')
-            print('Simulation #{}'.format(i))
-            # try:
-            chdir(self.paths[2])
-            to_write = CreateOZN(*self.paths[:2], self.paths[-1]).write_ozn()
+            print('\n\nSimulation #{}'.format(i))
+            try:
+                to_write = CreateOZN(*self.paths).write_ozn()
 
-            RunSim(*self.paths[:2], self.paths[3]).run_simulation()
-            time.sleep(1)
+                self.single_sim(to_write)
+                if to_write[0] == 0:
+                    continue
 
-            # writing results to results table
-            self.results.append([self.choose_max(), self.choose_crit(), *to_write])
-            print(self.results[len(self.results) - 1])
-            # except (KeyError, TypeError, ValueError):
-            #     print('An error occured, simulation passed.')
-            
-            # exporting results every self.save_samp seconds
-            if (i+1) % self.save_samp == 0:
+                # change relative fire coordinates for the nearest column and run sim again
+                xr, yr = CreateOZN(*self.paths).fire_place(
+                    *to_write[2], CreateOZN(*self.paths).elements_place(), element='c')
+                to_write[0] = 0
                 chdir(self.paths[1])
-                Export(self.results).csv_write('stoch_res')
+                with open('test.ozn') as file:
+                    ftab = file.readlines()
+                ftab[302] = '1.2\n'
+                ftab[306] = '{}\n'.format(xr)
+                ftab[307] = '{}\n'.format(yr)
+                with open('test.ozn', 'w') as file:
+                    file.writelines(ftab)
+
+                print('\nSimulation #{}-a'.format(i))
+                self.single_sim(to_write)
+
+                if self.results[-1][0] > self.results[-2][0]:
+                    self.results.pop(-2)
+                else:
+                    self.results.pop(-1)
+
+            except (KeyError, TypeError, ValueError):
+                self.results.append(['error'])
+                print('An error occured, simulation passed.')
+
+            # exporting results every (self.save_samp) repetitions
+            if (i+1) % self.save_samp == 0:
+                Export(self.results, self.paths[1]).csv_write('stoch_res')
                 self.results.clear()
 
         # safe closing code:
-        RunSim(*self.paths[:2], self.paths[3]).close_ozn()
-
-        # exporting results
-        # chdir(self.paths[1])
-        # Export(self.results).csv_write('stoch_res')
-        # Export(self.results).sql_write()
+        RunSim(*self.paths).close_ozn()
 
         # creating distribution table
+        # Charting(self.paths[1]).test()
         Charting(self.paths[1]).ak_distr('stoch_res.csv', self.t_crit)
 
-        # there is need to make Export().csv_write() function more versatile
 
-
-'''making charts - there is a need to do little tiding'''
+'''set of charting functions for different purposes'''
 
 
 class Charting:
     def __init__(self, res_path):
-        self.results = []
         chdir(res_path)
+        self.results = rcsv('stoch_res.csv', sep=',')
+        print(self.results)
 
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
@@ -399,29 +403,31 @@ class Charting:
 
         return [[no_collapse], times, probs]
 
-    def ak_distr(self, file_title, t_crit):
-
-        data = rcsv(file_title, sep=',')
-        print(data)
-        prob = len(data.t_max[data.t_max < float(t_crit)])/len(data.t_max)
+    def ak_distr(self, t_crit):
+        prob = len(self.results.t_max[self.results.t_max < float(t_crit)])/len(self.results.t_max)
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
-        sns_plot = sns.distplot(data.t_max, hist_kws={'cumulative': True},
+        sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
                                 kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Temperatura [°C]')
 
         plt.axvline(x=t_crit, color='r')
         plt.axhline(y=prob, color='r')
         plt.subplot(122)
-        sns_plot = sns.distplot(data.time_crit[data.time_crit > 0], hist_kws={'cumulative': True},
+        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0], hist_kws={'cumulative': True},
                                 kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Czas [s]')
         plt.savefig('dist_p.png')
+
+    def test(self):
+        plt.plot(range(10), self.results.t_max)
+        plt.show()
 
 
 '''exporting results to SQLite database'''
 
 
 class Export:
-    def __init__(self, results):
+    def __init__(self, results, res_path):
+        chdir(res_path)
         self.res_tab = results
 
     def __sql_connect(self):
@@ -468,7 +474,7 @@ def temp_crit(coef):
     return 39.19 * log(1 / 0.9674 / coef ** 3.833 - 1) + 482
 
 
-'''returns random (between given boundaries) fire parameters'''
+'''fire randomization functions'''
 
 
 def random_position(xmax, ymax):
@@ -478,7 +484,10 @@ def random_position(xmax, ymax):
     return fire
 
 
-'''fire randomization functions'''
+def triangular(left, right, mode=False):
+    if not mode:
+        mode = (right - left) / 3 + left
+    return random.triangular(left, mode, right)
 
 
 def pool_fire(title, t_end, max_a, only_mass=False):
@@ -552,15 +561,17 @@ def user_def_fire():
      return hrr, mass_flux, area
 
 
-def triangular(left, right, mode=False):
-    if not mode:
-        mode = (right - left) / 3 + left
-    return random.triangular(left, mode, right)
+def test_fire():
+    hrr = [0, 0, 15, 40]
+    area = 10
+    height = 0
+
+    return hrr, area, height
 
 
 if __name__ == '__main__':
-    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\glic_1', 'D:\CR_qsync\ED_\ '[:-1] +\
-                    '02_cfd\ '[:-1] + '2019\ '[:-1] + '40_bioagra_tychy\ '[:-1] + '04_ozone\estr_10\config', 'estr_10'
+    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + 'test', 'D:\ozone_results\ '[:-1] +\
+                    'test\config', 'test'
 
 # OZone program folder, results folder, config folder, simulation name
 
