@@ -20,11 +20,12 @@ class CreateOZN:
         self.sim_name = sim_name
         self.to_write = [0]     # 0 - column, 1 - beam
         self.floor = []
+        self.prof_type = 'HE 300 B'
 
     def write_ozn(self):
         tab_new = []
         [tab_new.extend(i) for i in [self.geom(), self.material(), self.openings(), '\n'*30, '0\n'*6, self.ceiling(),
-                                     self.smoke_extractors(), ['0\n', '1.27\n'], self.fire(),self.strategy(),
+                                     self.smoke_extractors(), ['0\n', '1.27\n'], self.fire(), self.strategy(),
                                      self.parameters(), self.profile()]]
 
         chdir(self.results_path)
@@ -42,7 +43,7 @@ class CreateOZN:
 
         return geom_tab[:6]
 
-    def elements_place(self):
+    def elements_dict(self):
         with open(self.sim_name+'.xel', 'r') as file:
             construction = dict(js.load(file))
         return construction
@@ -53,6 +54,11 @@ class CreateOZN:
         with open(self.sim_name+'.mat', 'r') as file:
             my_mat = file.readlines()
 
+        # when materials not from catalogue are used you need to write properties layer by layer
+        if my_mat[0] == 'user\n':
+            return my_mat[1:]
+
+        # when materials are catalogued you only need to define name:thickness of each layer
         for j in my_mat:
             if j == '\n':
                 [tab_new.append('\n') for i in range(7)]
@@ -66,12 +72,14 @@ class CreateOZN:
 
     def openings(self):
         no_open = []
+        [no_open.append('\n') for i in range(60)]
 
-        for i in range(60):
-            no_open.append('\n')
-
-        with open(self.sim_name+'.op', 'r') as file:
-            holes = js.load(file)
+        try:
+            with open(self.sim_name+'.op', 'r') as file:
+                holes = js.load(file)
+        except FileNotFoundError:
+            print('There are no openings')
+            return no_open
 
         for k, v in holes:
             [no_open.insert((int(k)-1)*15 + (int(v)-1)*5 + c, str(holes[k+v][c]) + '\n') for c in range(5)]
@@ -81,60 +89,85 @@ class CreateOZN:
 
     def ceiling(self):
         tab_new = []
-        with open(self.sim_name+'.cel', 'r') as file:
-            ceil = file.readlines()
+        try:
+            with open(self.sim_name+'.cel', 'r') as file:
+                ceil = file.readlines()
+        except FileNotFoundError:
+            print('There is no horizontal natural ventilation')
+            tab_new.insert(0, '0\n')
+            [tab_new.append('\n') for i in range(9)]
+            return tab_new
+
         tab_new.extend(ceil)
         [tab_new.append('\n') for i in range((3 - int(ceil[0]))*3)]
         return tab_new
 
     def smoke_extractors(self):
-        with open(self.sim_name+'.ext', 'r') as file:
-            ext = file.readlines()
-
+        try:
+            with open(self.sim_name+'.ext', 'r') as file:
+                ext = file.readlines()
+        except FileNotFoundError:
+            print('There is no forced ventilation')
+            ext = ['0\n']
+            [ext.append('\n') for i in range(12)]
         return ext
 
     def fire(self):
 
-        floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
-
+        # floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
+        #
         # there is proper randomizing function called below (i.e. pool_fire())
+
         # hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), floor_size, only_mass=False)
-        hrr, area, height = test_fire()
+        # hrr, area, height = test_fire()
+        hrr, area, fuel_h, fuel_x, fuel_y = aflo_fire()
         self.to_write.append(hrr[3])
 
-        h, x, y = self.geom()[2:5]
+        comp_h = self.geom()[2]
         diam = round(2*sqrt(area/pi), 2)
 
-        tab_new = []
-        with open(self.sim_name + '.udf', 'r') as file:
-            fire = file.readlines()
-        tab_new.extend(fire)
-        tab_new.insert(0, '{}\n'.format(height))
-        tab_new.insert(2, h)
+        # tab_new = [fire_type, distance_on_X_axis, number_of_fires]
+        tab_new = ['Localised\n', '0\n', '1\n']
+        tab_new.insert(1, comp_h)
 
         for i in hrr:
             tab_new.append('{}\n'.format(i))
 
         # overwriting absolute positions with relative ones
-        xf, yf = random_position(x, y)
-        self.to_write.append([xf, yf, diam])
+        xf, yf, zf = random_position(fuel_x, fuel_y, zes=fuel_h)
+        self.to_write.append([xf, yf, zf, diam])
+        tab_new.insert(0, '{}\n'.format(fuel_h[1] - zf))
 
-        xr, yr = self.fire_place(xf, yf, diam, self.elements_place())
-        tab_new.insert(6, '{}\n'.format(diam))
-        tab_new.insert(7, '{}\n'.format(round(xr, 2)))
-        tab_new.insert(8, '{}\n'.format(round(yr, 2)))
+        xr, yr, zr = self.fire_place(xf, yf, diam, self.elements_dict(), fire_z=zf)
+        tab_new.insert(5, '{}\n'.format(diam))
+        tab_new.insert(6, '{}\n'.format(round(xr, 2)))
+        tab_new.insert(7, '{}\n'.format(round(yr, 2)))
         if self.to_write[0] == 0:
-            tab_new[3] = '0\n'  # overwriting height of measures
+            check_z = 0
+        else:
+            check_z = zr
+        tab_new.insert(3, '{}\n'.format(check_z))  # overwriting height of measures
         tab_new.insert(9, '{}\n'.format(len(hrr)/2))
 
         return tab_new
 
     # sets fire position relatively to the nearest element
-    def fire_place(self, xf, yf, f_d, elements, element=None):
-        def nearest(src, tab):
+    def fire_place(self, xf, yf, f_d, elements, element=None, fire_z=0):
+        def nearest(src, tab, positive=False):
             delta = 0
+
             for k in tab:
-                dist = float(k) - src
+                try:
+                    dist = float(k) - src
+                except ValueError:
+                    continue
+
+                if positive and dist < 0:
+                    delta = 1 / dist
+                    continue
+                elif positive:
+                    return dist
+
                 if dist == 0:
                     return 0
                 elif abs(1 / dist) > abs(delta):
@@ -143,10 +176,14 @@ class CreateOZN:
                     return 1/delta
             return 1/delta
 
-        dy = nearest(yf, elements.keys())
-        print('Yf', yf, 'dY', dy, 'chosenY: ', yf + dy)
-        dx = nearest(xf, elements[str(round(yf + dy, 1))])
+        dz = nearest(fire_z, elements["geom"].keys(), positive=True)
+        print('Zf', fire_z, 'dZ', dz, 'chosenZ: ', fire_z + dz)
+        beams = elements["geom"]["{}".format(round(fire_z + dz, 1))]
+        prof_list = elements["profiles"]
 
+        dy = nearest(yf, beams.keys())     #beam
+        print('Yf', yf, 'dY', dy, 'chosenY: ', yf + dy)
+        dx = nearest(xf, beams[str(round(yf + dy, 1))])     #column
         print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
         rad = f_d/2
         dist = 2*(dx*dx + dy*dy)**0.5
@@ -155,11 +192,13 @@ class CreateOZN:
 
         if f_d > 2*(dx*dx + dy*dy)**0.5 or element == 'c':
             print('there is a column considered')
-            return dx, dy
+            self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
+            return dx, dy, dz
         else:
             print('there is a beam considered')
             self.to_write[0] = 1
-            return 0, dy
+            self.prof_type = prof_list[beams[str(round(yf + dy, 1))]["b"]]
+            return 0, dy, dz
 
     def strategy(self):
         with open(self.sim_name+'.str', 'r') as file:
@@ -174,34 +213,35 @@ class CreateOZN:
         return param
 
     def profile(self):
-        tab_new = []
-        with open(self.sim_name+'.prof', 'r') as file:
-            prof = file.readlines()
-        tab_new.extend(prof[:3])
-        if prof[2] == 'Catalogue\n':
-            ozone_prof = open(self.ozone_path + '\Profiles.sys').readlines()    # OS to check
-            prof_dict = {}
-            keys = []
-            values = []
-            for l in ozone_prof[3:]:
-                if l[0] == 'D':
-                    keys.append(l.split()[1])
-                    values = []
-                elif l != '\n':
-                    values.append(l.split('  ')[0])
-                else:
-                    prof_dict.update({keys[-1]: values})
+        tab_new = ['Steel\n', 'Unprotected\n', 'Catalogue\n']
+        with open(self.ozone_path + '\Profiles.sys') as file:
+            ozone_prof = file.readlines()
+        prof_dict = {}
+        keys = []
+        values = []
+        for l in ozone_prof[3:]:
+            if l[0] == 'D':
+                keys.append(l.split()[1])
+                values = []
+            elif l != '\n':
+                values.append(l.split('  ')[0])
+            else:
+                prof_dict.update({keys[-1]: values})
 
-            for t, p in prof_dict.items():
-                try:
-                    tab_new.extend([str(list(prof_dict.keys()).index(t)) + '\n',
-                                    str(p.index(prof[3 + self.to_write[0]][:-1])) + '\n'])
-                except ValueError:
-                    pass
+        # trying if profile input is included in OZone DB and adding indexes to tab_new
+        for t, p in prof_dict.items():
+            try:
+                [tab_new.append('{}\n'.format(i)) for i in [list(prof_dict.keys()).index(t), p.index(self.prof_type)]]
+            except ValueError:
+                pass
 
-            tab_new.extend(prof[5:])
-        else:
-            print('You do not use catalogue - repair .prof config file!')
+        tab_new.extend(['4 sides\n', 'Contour\n', 'Catalogue\n', 'Maximum\n'])
+        [tab_new.insert(i, '0\n') for i in [8, 8, 11, 11, 11]]
+        [tab_new.insert(i, '\n') for i in [9, 12, 12, 12]]
+
+        if len(tab_new) != 18:
+            print('There is an error with profile! - check CreateOZN().profile() function an XEL config file')
+
         return tab_new
 
 
@@ -318,37 +358,37 @@ class Main:
         # n_sampl is quantity of repetitions
         for i in range(int(n_sampl)):
             print('\n\nSimulation #{}'.format(i))
-            try:
-                to_write = CreateOZN(*self.paths).write_ozn()
+            # try:
+            to_write = CreateOZN(*self.paths).write_ozn()
 
-                self.single_sim(to_write)
-                if to_write[0] == 0:
-                    continue
+            self.single_sim(to_write)
+            if to_write[0] == 0:
+                continue
 
-                # change relative fire coordinates for the nearest column and run sim again
-                xr, yr = CreateOZN(*self.paths).fire_place(
-                    *to_write[2], CreateOZN(*self.paths).elements_place(), element='c')
-                to_write[0] = 0
-                chdir(self.paths[1])
-                with open('test.ozn') as file:
-                    ftab = file.readlines()
-                ftab[302] = '1.2\n'
-                ftab[306] = '{}\n'.format(xr)
-                ftab[307] = '{}\n'.format(yr)
-                with open('test.ozn', 'w') as file:
-                    file.writelines(ftab)
+            # change relative fire coordinates for the nearest column and run sim again
+            xr, yr = CreateOZN(*self.paths).fire_place(
+                *to_write[2], CreateOZN(*self.paths).elements_place(), element='c')
+            to_write[0] = 0
+            chdir(self.paths[1])
+            with open('test.ozn') as file:
+                ftab = file.readlines()
+            ftab[302] = '1.2\n'
+            ftab[306] = '{}\n'.format(xr)
+            ftab[307] = '{}\n'.format(yr)
+            with open('test.ozn', 'w') as file:
+                file.writelines(ftab)
 
-                print('\nSimulation #{}-a'.format(i))
-                self.single_sim(to_write)
+            print('\nSimulation #{}-a'.format(i))
+            self.single_sim(to_write)
 
-                if self.results[-1][0] > self.results[-2][0]:
-                    self.results.pop(-2)
-                else:
-                    self.results.pop(-1)
+            if self.results[-1][0] > self.results[-2][0]:
+                self.results.pop(-2)
+            else:
+                self.results.pop(-1)
 
-            except (KeyError, TypeError, ValueError):
-                self.results.append(['error'])
-                print('An error occured, simulation passed.')
+            # except (KeyError, TypeError, ValueError):
+            #     self.results.append(['error'])
+            #     print('An error occured, simulation passed.')
 
             # exporting results every (self.save_samp) repetitions
             if (i+1) % self.save_samp == 0:
@@ -477,10 +517,12 @@ def temp_crit(coef):
 '''fire randomization functions'''
 
 
-def random_position(xmax, ymax):
+def random_position(xes, yes, zes=(0, 1)):
     fire = []
-    [fire.append(random.randint(0, int(10 * float(i)))/10) for i in (xmax, ymax)]
+    [fire.append(random.randint(int(10 * float(i[0])), int(10 * float(i[1])))/10) for i in [xes, yes, zes]]
 
+    if zes == (0, 1):
+        return fire[:-1]
     return fire
 
 
@@ -569,10 +611,34 @@ def test_fire():
     return hrr, area, height
 
 
+def aflo_fire():
+    hrr = [0, 0, 10, 10, 20, 0]
+    area = 5
+    fuel_height = (1, 35)
+    fuel_xes = (0.3, 23.1)
+    fuel_yes = (10.3, 101.7)
+    return hrr, area, fuel_height, fuel_xes, fuel_yes
+
+
+def annex_fire(a_max, parameters):
+    tab_new = ['NFSC\n', '{}\n'.format(a_max)]
+    [tab_new.append('{}\n'.format(i)) for i in parameters]
+    [tab_new.append('{}\n'.format(i)) for i in [17.5, 0.8, 2, 'Office (standard)', 'Medium', 250, 511, 1]]
+    [tab_new.append('\n') for i in range(5)]
+    tab_new.append('{}\n'.format(a_max))
+    print(tab_new)
+
+    return tab_new
+
+
 if __name__ == '__main__':
-    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + 'test', 'D:\ozone_results\ '[:-1] +\
-                    'test\config', 'test'
+    cfd_folder = 'D:\CR_qsync\ED_\ '[:-1]+'02_cfd\ '[:-1]+'2019\ '[:-1]
+    task = '48_aflofarm_pabianice\ '[:-1]
+    series = 'aflo'
+    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + task + series,\
+                    cfd_folder+task + '02_ozone\config', series
 
 # OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
+    # print(CreateOZN(*windows_paths).fire())
