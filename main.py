@@ -114,14 +114,12 @@ class CreateOZN:
 
     def fire(self):
 
-        # floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
-        #
-        # there is proper randomizing function called below (i.e. pool_fire())
+        floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
 
-        # hrr, area, height = pool_fire(self.sim_name, int(self.parameters()[6][:-1]), floor_size, only_mass=False)
-        # hrr, area, height = test_fire()
-        hrr, area, fuel_h, fuel_x, fuel_y = aflo_fire()
-        self.to_write.append(hrr[3])
+        # fire randomizing function from Fires() class is called below
+
+        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo_fire()
+        self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
         diam = round(2*sqrt(area/pi), 2)
@@ -135,18 +133,14 @@ class CreateOZN:
 
         # overwriting absolute positions with relative ones
         xf, yf, zf = random_position(fuel_x, fuel_y, zes=fuel_h)
-        self.to_write.append([xf, yf, zf, diam])
+        self.to_write.extend([xf, yf, zf, diam/2])
         tab_new.insert(0, '{}\n'.format(fuel_h[1] - zf))
 
         xr, yr, zr = self.fire_place(xf, yf, diam, self.elements_dict(), fire_z=zf)
         tab_new.insert(5, '{}\n'.format(diam))
         tab_new.insert(6, '{}\n'.format(round(xr, 2)))
         tab_new.insert(7, '{}\n'.format(round(yr, 2)))
-        if self.to_write[0] == 0:
-            check_z = 0
-        else:
-            check_z = zr
-        tab_new.insert(3, '{}\n'.format(check_z))  # overwriting height of measures
+        tab_new.insert(3, '{}\n'.format(zr))  # overwriting height of measures
         tab_new.insert(9, '{}\n'.format(len(hrr)/2))
 
         return tab_new
@@ -187,17 +181,21 @@ class CreateOZN:
         print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
         rad = f_d/2
         dist = 2*(dx*dx + dy*dy)**0.5
-        self.to_write.extend([rad, dist])
+        self.to_write.append(dist)
         print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
 
         if f_d > 2*(dx*dx + dy*dy)**0.5 or element == 'c':
             print('there is a column considered')
             self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
-            return dx, dy, dz
+            return dx, dy, 0
         else:
             print('there is a beam considered')
             self.to_write[0] = 1
-            self.prof_type = prof_list[beams[str(round(yf + dy, 1))]["b"]]
+            try:
+                self.prof_type = prof_list[beams[str(round(yf + dy, 1))]["b"]]
+            except KeyError:
+                self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
+                return dx, dy, 0
             return 0, dy, dz
 
     def strategy(self):
@@ -304,8 +302,8 @@ class Main:
     def __init__(self, paths):
         self.paths = paths
         self.results = []
-        self.t_crit = temp_crit(0.7)
-        self.save_samp = 1
+        self.t_crit = temp_crit(1)
+        self.save_samp = 2
 
     def add_data(self):
         steel_temp = []
@@ -329,11 +327,11 @@ class Main:
         
         for i in stt:
             if int(i[1]) >= self.t_crit:
-            # linear interpolation module, step of interpolation =int_step
+                # linear interpolation module, step of interpolation =int_step
                 t1, t2 = (int(i[1] - 60), int(i[1]))
                 for j in range(int(60/int_step)):
                     interpolated = t1 + (t2 - t1) / 60 * int_step * j
-                    if  interpolated >= self.t_crit:
+                    if interpolated >= self.t_crit:
                         return int(i[0]) + j * 5
         return 0
 
@@ -343,7 +341,7 @@ class Main:
 
         # writing results to results table
         self.results.append([self.choose_max(), self.choose_crit(), *export_list])
-        print(self.results[len(self.results) - 1])
+        # print(self.results[len(self.results) - 1])
         
     def get_results(self, n_sampl):
 
@@ -352,7 +350,7 @@ class Main:
         RunSim(*self.paths).open_ozone()
 
         # add headers to results table columns
-        self.results.insert(0, ['t_max', 'time_crit', 'element', 'radius', 'distance', 'hrr'])
+        self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr', 'xf', 'yf', 'zf', 'radius', 'distance'])
 
         # !!!this is main loop for stochastic analyses!!!
         # n_sampl is quantity of repetitions
@@ -363,14 +361,18 @@ class Main:
 
             self.single_sim(to_write)
             if to_write[0] == 0:
+                if (i + 1) % self.save_samp == 0:
+                    Export(self.results, self.paths[1]).csv_write('stoch_res')
+                    self.results.clear()
                 continue
 
             # change relative fire coordinates for the nearest column and run sim again
-            xr, yr = CreateOZN(*self.paths).fire_place(
-                *to_write[2], CreateOZN(*self.paths).elements_place(), element='c')
+            print('\nSimulation #{}-a'.format(i))
+            xr, yr, zr = CreateOZN(*self.paths).fire_place(
+                *to_write[2][:2], to_write[3], CreateOZN(*self.paths).elements_dict(), element='c')
             to_write[0] = 0
             chdir(self.paths[1])
-            with open('test.ozn') as file:
+            with open('{}.ozn'.format(self.paths[-1])) as file:
                 ftab = file.readlines()
             ftab[302] = '1.2\n'
             ftab[306] = '{}\n'.format(xr)
@@ -378,7 +380,6 @@ class Main:
             with open('test.ozn', 'w') as file:
                 file.writelines(ftab)
 
-            print('\nSimulation #{}-a'.format(i))
             self.single_sim(to_write)
 
             if self.results[-1][0] > self.results[-2][0]:
@@ -400,7 +401,7 @@ class Main:
 
         # creating distribution table
         # Charting(self.paths[1]).test()
-        Charting(self.paths[1]).ak_distr('stoch_res.csv', self.t_crit)
+        # Charting(self.paths[1]).ak_distr('stoch_res.csv', self.t_crit)
 
 
 '''set of charting functions for different purposes'''
@@ -410,7 +411,6 @@ class Charting:
     def __init__(self, res_path):
         chdir(res_path)
         self.results = rcsv('stoch_res.csv', sep=',')
-        print(self.results)
 
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
@@ -496,7 +496,6 @@ class Export:
     def csv_write(self, title):
         writelist = []
 
-        print(self.res_tab)
         for i in self.res_tab:
             for j in range(len(i)):
                 i[j] = str(i[j])
@@ -507,14 +506,122 @@ class Export:
         print('results has been written to CSV file')
 
 
+'''fire randomization class'''
+
+
+class Fires:
+    def __init__(self, a_max, t_end):
+        self.a_max = a_max
+        self.t_end = t_end
+
+    def pool_fire(self, title, only_mass=False):
+        with open('{}.ful'.format(title)) as file:
+            fuel_prop = file.readlines()[1].split(',')
+
+        # random mass of fuel
+        try:
+            mass = triangular(int(fuel_prop[5]), int(fuel_prop[6]))
+        except ValueError:
+            mass = int(fuel_prop[5])
+
+        # random area of leakage
+        if only_mass:
+            area_ = mass * 0.03  # 0.019 # glycerol # 0.03 methanol leakage
+            area = triangular(area_ * 0.9 * 100, area_ * 1.1 * 100) / 100
+        else:
+            try:
+                area = triangular(int(fuel_prop[3]), int(fuel_prop[4]))
+            except ValueError:
+                area = int(fuel_prop[3])
+
+        if area < 0.28:
+            ml_rate = triangular(0.015 * .9, 0.015 * 1.1)
+        elif area < 7.07:
+            ml_rate = triangular(0.022 * .9, 0.022 * 1.1)
+        else:
+            ml_rate = triangular(0.029 * .9, 0.029 * 1.1)
+
+        if self.a_max < area:
+            area = self.a_max
+
+        print('mass loss rate = {}'.format(ml_rate))
+        hrr_ = float(fuel_prop[1]) * ml_rate * area  # [MW] - heat release rate
+        hrr = triangular(hrr_ * .8, hrr_ * 1.2)
+
+        time_end = mass / ml_rate / area
+        if time_end > self.t_end:
+            time_end = self.t_end
+            hrr_list = [0, hrr, time_end / 60, hrr]
+        else:
+            if time_end < 60:
+                time_end = 60
+            hrr_list = [0, hrr, time_end / 60, hrr]
+            hrr_list.extend([hrr_list[-2] + 1 / 6, 0, self.t_end / 60, 0])
+
+        print('HRR = {}MW'.format(hrr))
+
+        fuel_h = round(1 / float(fuel_prop[2]) / float(fuel_prop[5]), 2)
+
+        return hrr_list, area, fuel_h
+
+    def user_def_fire(self):
+         tab_new = []
+         with open('udf_file', 'r') as file:
+            fire = file.readlines()
+
+         tab_new.extend(fire[:10])
+         max_area = int(fire[2][:2])
+         comb_eff = 0.8
+         comb_heat = float(fire[7][:-1])
+         max_hrr = float(fire[-1].split()[1])
+
+         for line in fire[10:]:
+             time = float(line.split()[0])   # it may be easier way
+             hrr = float(line.split()[1])
+             mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
+             area = round(max_area*hrr/max_hrr, ndigits=2)
+
+         return hrr, mass_flux, area
+
+    def test_fire(self):
+        hrr = [0, 0, 15, 40]
+        area = 10
+        height = 0
+
+        return hrr, area, height
+
+    def annex_fire(self, a_max, parameters):
+        tab_new = ['NFSC\n', '{}\n'.format(a_max)]
+        [tab_new.append('{}\n'.format(i)) for i in parameters]
+        [tab_new.append('{}\n'.format(i)) for i in [17.5, 0.8, 2, 'Office (standard)', 'Medium', 250, 511, 1]]
+        [tab_new.append('\n') for i in range(5)]
+        tab_new.append('{}\n'.format(a_max))
+        print(tab_new)
+
+        return tab_new
+
+    def aflo_fire(self):
+        alpha = triangular(0.1, 0.2, mode=0.18760)
+        hrr_max = triangular(6000, 8000)
+        hrr = []
+        for i in range(0, self.t_end + 1, 30):
+            hrr.extend([i/60, (alpha * i ** 2)/1000])
+            if hrr[-1] > hrr_max:
+                hrr[-1] = hrr_max
+
+        area = self.a_max
+        fuel_height = (1, 35)
+        fuel_xes = (0.3, 23.1)
+        fuel_yes = (10.3, 101.7)
+
+        return hrr, area, fuel_height, fuel_xes, fuel_yes
+
+
 '''calculating critical temperature according to equation from Eurocode 3'''
 
 
 def temp_crit(coef):
     return 39.19 * log(1 / 0.9674 / coef ** 3.833 - 1) + 482
-
-
-'''fire randomization functions'''
 
 
 def random_position(xes, yes, zes=(0, 1)):
@@ -532,103 +639,6 @@ def triangular(left, right, mode=False):
     return random.triangular(left, mode, right)
 
 
-def pool_fire(title, t_end, max_a, only_mass=False):
-    with open('{}.ful'.format(title)) as file:
-        fuel_prop = file.readlines()[1].split(',')
-    
-    # random mass of fuel
-    try:
-        mass = triangular(int(fuel_prop[5]), int(fuel_prop[6]))
-    except ValueError:
-        mass = int(fuel_prop[5])
-
-    # random area of leakage
-    if only_mass:
-        area_ = mass * 0.03  #0.019 # glycerol # 0.03 methanol leakage
-        area = triangular(area_*0.9*100, area_*1.1*100)/100
-    else:
-        try:
-            area = triangular(int(fuel_prop[3]), int(fuel_prop[4]))
-        except ValueError:
-            area = int(fuel_prop[3])
-            
-    if area < 0.28:
-        ml_rate = triangular(0.015*.9, 0.015*1.1)
-    elif area < 7.07:
-        ml_rate = triangular(0.022*.9, 0.022*1.1)
-    else:
-        ml_rate = triangular(0.029*.9, 0.029*1.1)
-
-    if max_a < area:
-        area = max_a
-
-    print('mass loss rate = {}'.format(ml_rate))
-    hrr_ = float(fuel_prop[1]) * ml_rate * area    # [MW] - heat release rate
-    hrr = triangular(hrr_*.8, hrr_*1.2)
-    
-    time_end = mass / ml_rate / area
-    if time_end > t_end:
-        time_end = t_end
-        hrr_list = [0, hrr, time_end/60, hrr]
-    else:
-        if time_end < 60:
-            time_end = 60
-        hrr_list = [0, hrr, time_end/60, hrr]
-        hrr_list.extend([hrr_list[-2] + 1/6, 0,  t_end/60, 0])
-
-    print('HRR = {}MW'.format(hrr))
-
-    fuel_h = round(1/float(fuel_prop[2])/float(fuel_prop[5]), 2)
-
-    return hrr_list, area, fuel_h
-
-
-def user_def_fire():
-     tab_new = []
-     with open('udf_file', 'r') as file:
-        fire = file.readlines()
-
-     tab_new.extend(fire[:10])
-     max_area = int(fire[2][:2])
-     comb_eff = 0.8
-     comb_heat = float(fire[7][:-1])
-     max_hrr = float(fire[-1].split()[1])
-     
-     for line in fire[10:]:
-         time = float(line.split()[0])   # it may be easier way
-         hrr = float(line.split()[1])
-         mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
-         area = round(max_area*hrr/max_hrr, ndigits=2)
-         
-     return hrr, mass_flux, area
-
-
-def test_fire():
-    hrr = [0, 0, 15, 40]
-    area = 10
-    height = 0
-
-    return hrr, area, height
-
-
-def aflo_fire():
-    hrr = [0, 0, 10, 10, 20, 0]
-    area = 5
-    fuel_height = (1, 35)
-    fuel_xes = (0.3, 23.1)
-    fuel_yes = (10.3, 101.7)
-    return hrr, area, fuel_height, fuel_xes, fuel_yes
-
-
-def annex_fire(a_max, parameters):
-    tab_new = ['NFSC\n', '{}\n'.format(a_max)]
-    [tab_new.append('{}\n'.format(i)) for i in parameters]
-    [tab_new.append('{}\n'.format(i)) for i in [17.5, 0.8, 2, 'Office (standard)', 'Medium', 250, 511, 1]]
-    [tab_new.append('\n') for i in range(5)]
-    tab_new.append('{}\n'.format(a_max))
-    print(tab_new)
-
-    return tab_new
 
 
 if __name__ == '__main__':
