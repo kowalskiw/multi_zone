@@ -118,7 +118,7 @@ class CreateOZN:
 
         # fire randomizing function from Fires() class is called below
 
-        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo_fire()
+        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo_fire(self.sim_name)
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -136,7 +136,7 @@ class CreateOZN:
         self.to_write.extend([xf, yf, zf, diam/2])
         tab_new.insert(0, '{}\n'.format(fuel_h[1] - zf))
 
-        xr, yr, zr = self.fire_place(xf, yf, diam, self.elements_dict(), fire_z=zf)
+        xr, yr, zr = self.fire_place(xf, yf, diam, self.elements_dict(), fire_z=zf, element='b')
         tab_new.insert(5, '{}\n'.format(diam))
         tab_new.insert(6, '{}\n'.format(round(xr, 2)))
         tab_new.insert(7, '{}\n'.format(round(yr, 2)))
@@ -146,7 +146,7 @@ class CreateOZN:
         return tab_new
 
     # sets fire position relatively to the nearest element
-    def fire_place(self, xf, yf, f_d, elements, element=None, fire_z=0):
+    def fire_place(self, xf, yf, f_d, elements, element='b', fire_z=0):
         def nearest(src, tab, positive=False):
             delta = 0
 
@@ -184,18 +184,20 @@ class CreateOZN:
         self.to_write.append(dist)
         print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
 
-        if f_d > 2*(dx*dx + dy*dy)**0.5 or element == 'c':
+        if element == 'c':
             print('there is a column considered')
             self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
-            return dx, dy, 0
+            return dx, dy, 1.2
         else:
-            print('there is a beam considered')
             self.to_write[0] = 1
             try:
                 self.prof_type = prof_list[beams[str(round(yf + dy, 1))]["b"]]
             except KeyError:
+                self.to_write[0] = 0
+                print('there is a column considered --> we have no beam above')
                 self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
-                return dx, dy, 0
+                return dx, dy, 1.2
+            print('there is a beam considered')
             return 0, dy, dz
 
     def strategy(self):
@@ -303,7 +305,7 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(1)
-        self.save_samp = 2
+        self.save_samp = 100
 
     def add_data(self):
         steel_temp = []
@@ -368,8 +370,9 @@ class Main:
 
             # change relative fire coordinates for the nearest column and run sim again
             print('\nSimulation #{}-a'.format(i))
+            print(to_write)
             xr, yr, zr = CreateOZN(*self.paths).fire_place(
-                *to_write[2][:2], to_write[3], CreateOZN(*self.paths).elements_dict(), element='c')
+                *to_write[2:4], to_write[5]*2, CreateOZN(*self.paths).elements_dict(), fire_z=to_write[4], element='c')
             to_write[0] = 0
             chdir(self.paths[1])
             with open('{}.ozn'.format(self.paths[-1])) as file:
@@ -377,7 +380,7 @@ class Main:
             ftab[302] = '1.2\n'
             ftab[306] = '{}\n'.format(xr)
             ftab[307] = '{}\n'.format(yr)
-            with open('test.ozn', 'w') as file:
+            with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
                 file.writelines(ftab)
 
             self.single_sim(to_write)
@@ -600,19 +603,25 @@ class Fires:
 
         return tab_new
 
-    def aflo_fire(self):
-        alpha = triangular(0.1, 0.2, mode=0.18760)
-        hrr_max = triangular(6000, 8000)
-        hrr = []
-        for i in range(0, self.t_end + 1, 30):
-            hrr.extend([i/60, (alpha * i ** 2)/1000])
-            if hrr[-1] > hrr_max:
-                hrr[-1] = hrr_max
-
-        area = self.a_max
-        fuel_height = (1, 35)
+    def aflo_fire(self, name):
+        fuel_height = (0.32, 34.1)
         fuel_xes = (0.3, 23.1)
         fuel_yes = (10.3, 101.7)
+        hrr_max = 50
+
+        config = rcsv('{}.ful'.format(name), sep=',')
+        print(float(config.alpha_mode))
+        alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
+        hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
+        
+        area = hrr_max/hrrpua
+        
+        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
+        hrr = []
+        for i in range(0, self.t_end + 1, 60):
+            hrr.extend([i/60, round(alpha/1000 * (i ** 2), 4)])
+            if hrr[-1] > hrr_max:
+                hrr[-1] = hrr_max
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
@@ -639,8 +648,6 @@ def triangular(left, right, mode=False):
     return random.triangular(left, mode, right)
 
 
-
-
 if __name__ == '__main__':
     cfd_folder = 'D:\CR_qsync\ED_\ '[:-1]+'02_cfd\ '[:-1]+'2019\ '[:-1]
     task = '48_aflofarm_pabianice\ '[:-1]
@@ -651,4 +658,4 @@ if __name__ == '__main__':
 # OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
-    # print(CreateOZN(*windows_paths).fire())
+    # CreateOZN(*windows_paths).to_write()
