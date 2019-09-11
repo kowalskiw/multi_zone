@@ -117,8 +117,8 @@ class CreateOZN:
         floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
 
         # fire randomizing function from Fires() class is called below
-
-        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo_fire(self.sim_name)
+        
+        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo1_fire(self.sim_name)
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -413,7 +413,7 @@ class Main:
 class Charting:
     def __init__(self, res_path):
         chdir(res_path)
-        self.results = rcsv('stoch_res.csv', sep=',')
+        self.results = rcsv('stoch_res.csv', sep=';')
 
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
@@ -447,7 +447,8 @@ class Charting:
         return [[no_collapse], times, probs]
 
     def ak_distr(self, t_crit):
-        prob = len(self.results.t_max[self.results.t_max < float(t_crit)])/len(self.results.t_max)
+        print(self.results)
+        prob = len(self.results.t_max[self.results.t_max < t_crit])/len(self.results.t_max)
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
         sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
@@ -459,6 +460,10 @@ class Charting:
         sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0], hist_kws={'cumulative': True},
                                 kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Czas [s]')
         plt.savefig('dist_p.png')
+
+        plt.figure()
+        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0])
+        plt.savefig('dist_d.png')
 
     def test(self):
         plt.plot(range(10), self.results.t_max)
@@ -603,7 +608,7 @@ class Fires:
 
         return tab_new
 
-    def aflo_fire(self, name):
+    def aflo2_fire(self, name):
         fuel_height = (0.32, 34.1)
         fuel_xes = (0.3, 23.1)
         fuel_yes = (10.3, 101.7)
@@ -622,6 +627,30 @@ class Fires:
             hrr.extend([i/60, round(alpha/1000 * (i ** 2), 4)])
             if hrr[-1] > hrr_max:
                 hrr[-1] = hrr_max
+
+        return hrr, area, fuel_height, fuel_xes, fuel_yes
+
+    def aflo1_fire(self, name):
+        fuel_height = (0.32, 34.1)
+        fuel_xes = (0.3, 23.1)
+        fuel_yes = (10.3, 101.7)
+        hrr_max = 50
+        
+        H = fuel_height[1] - fuel_height[0]
+        A_max = (fuel_xes[1] - fuel_xes[0])**2 * 3.1415 /4
+        
+        config = rcsv('{}.ful'.format(name), sep=',')
+        alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
+        area = triangular(0, A_max)
+
+        
+        print('alpha:{}, radius: {}'.format(alpha, (area/3.1415)**0.5))
+        hrr = []
+        for i in range(0, self.t_end + 1, 60):
+            hrr.extend([i/60, round(H * alpha * (i ** 3)/1000, 4)])
+            if hrr[-1] > hrr_max:
+                hrr[-1] = hrr_max
+
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
@@ -659,3 +688,4 @@ if __name__ == '__main__':
 
     Main(windows_paths).get_results(argv[1])
     # CreateOZN(*windows_paths).to_write()
+    # Charting('D:\ozone_results\ '[:-1] + task + series).ak_distr(temp_crit(1))
