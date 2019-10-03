@@ -118,7 +118,7 @@ class CreateOZN:
 
         # fire randomizing function from Fires() class is called below
         
-        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo1_fire(self.sim_name)
+        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo2_fire(self.sim_name)
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -305,7 +305,7 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(1)
-        self.save_samp = 100
+        self.save_samp = 1
 
     def add_data(self):
         steel_temp = []
@@ -352,7 +352,7 @@ class Main:
         RunSim(*self.paths).open_ozone()
 
         # add headers to results table columns
-        self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr', 'xf', 'yf', 'zf', 'radius', 'distance'])
+        self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius', 'distance'])
 
         # !!!this is main loop for stochastic analyses!!!
         # n_sampl is quantity of repetitions
@@ -413,7 +413,7 @@ class Main:
 class Charting:
     def __init__(self, res_path):
         chdir(res_path)
-        self.results = rcsv('stoch_res.csv', sep=';')
+        self.results = rcsv('stoch_res.csv', sep=',')
 
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
@@ -609,16 +609,15 @@ class Fires:
         return tab_new
 
     def aflo2_fire(self, name):
-        fuel_height = (0.32, 34.1)
-        fuel_xes = (0.3, 23.1)
-        fuel_yes = (10.3, 101.7)
+        fuel_height = (0.5, 18.5)
+        fuel_xes = (0.5, 9.5)
+        fuel_yes = (0.5, 19.5)
         hrr_max = 50
 
         config = rcsv('{}.ful'.format(name), sep=',')
         print(float(config.alpha_mode))
         alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
         hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
-        
         area = hrr_max/hrrpua
         
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
@@ -653,7 +652,21 @@ class Fires:
 
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
-
+    def alfa_t2 (self, name):
+        config = rcsv('{}.ful'.format(name), sep=',')
+        alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
+        hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
+        hrr_max = float(*config.hrr_max)
+        area = hrr_max/hrrpua
+        
+        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
+        hrr = []
+        for i in range(0, self.t_end + 1, 60):
+            hrr.extend([i/60, round(alpha/1000 * (i ** 2), 4)])
+            if hrr[-1] > hrr_max:
+                hrr[-1] = hrr_max
+                
+        return hrr, area, fuel_height, fuel_xes, fuel_yes
 
 '''calculating critical temperature according to equation from Eurocode 3'''
 
@@ -679,13 +692,13 @@ def triangular(left, right, mode=False):
 
 if __name__ == '__main__':
     cfd_folder = 'D:\CR_qsync\ED_\ '[:-1]+'02_cfd\ '[:-1]+'2019\ '[:-1]
-    task = '48_aflofarm_pabianice\ '[:-1]
-    series = 'aflo'
+    task = 'dla_aq\ '[:-1]
+    series = 'little'
     windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + task + series,\
-                    cfd_folder+task + '02_ozone\config', series
+                    cfd_folder+task + 'config', series
 
 # OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
     # CreateOZN(*windows_paths).to_write()
-    # Charting('D:\ozone_results\ '[:-1] + task + series).ak_distr(temp_crit(1))
+    Charting('D:\ozone_results\ '[:-1] + task + series).ak_distr(temp_crit(1))
