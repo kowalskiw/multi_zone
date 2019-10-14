@@ -1,19 +1,19 @@
 Revision
-	- liczba303/302 ???
+	- liczba304/303/302 ???
 Name
 	- nazwa symulacji 
-	- typ geometrii podłogi
-    - typ geometrii dachu (Double/	
-		- wysokość pomieszczenia
-		- głębokość pomieszczenia
-		- szerokość pomieszczenia
+	- typ geometrii podłogi (Rect/Any)
+    - typ geometrii dachu (Double/Single/Flat)		pow pom przy "Any"
+		- wysokość pomieszczenia		liczba ścian przy "Any"
+		- głębokość pomieszczenia		Wysokość pom przy "Any
+		- szerokość pomieszczenia		dane ściany 1 przy "Any"...
 		- wysokość sufitu ('0' przy 'flat roof')
 	- nazwa materiału warstwy 1 ściany 1
 		- grubość
 		- gęstość
 		- przewodność
 		- ciepło właściwe
-		- zdolność emisyjna - ciepła powierzchnia
+		- zdolność emisyjna - ciepła powierzchnia (wg E3 2.2(2) emisyjność 0.7 dla stali węglowych i 0.4 dla nierdzewnych
 		- zdolność emisyjna - zimna powierzchnia
     - nazwa materiału warstwy 2 ściany 1
 		- grubość
@@ -176,7 +176,7 @@ Name
 		- ciepło właściwe
 		- zdolność emisyjna - ciepła powierzchnia
 		- zdolność emisyjna - zimna powierzchnia
-	- wysokość, na której zaczyna się otwór 1 w ścianie 1      /Otwory/
+/Otwory/	- wysokość, na której zaczyna się otwór 1 w ścianie 1
         - wysokość, na której kończy się otwór 1 w ścianie 1	
         - szerokść otworu
         - sterowanie (0 stały, 1 zależny od temperatur, 2 krokowy?, 3 liniowy, 4 zależny od czasu - parametry do ustawienia w sekcji 'Parameters')
@@ -298,29 +298,68 @@ Name
     '0' ???
 	- stoichometric coefficient
 	- wysokość paliwa -
-/Pożar/ - rodzaj pożaru (eurokod, zlokalizowany, użytkownika)
-		- powierzchnia
-		- wysokość pożaru
+/Pożar/ - rodzaj pożaru (eurokod, Localised, User defined)
+		- powierzchnia /dla pożaru użytkownika - ogrzewanie elementu poprzez gazy pożarowe/
+		- wysokość paliwa
 		- czy definiuję powierzchnię pożaru (0/1)
 		- czy definiuję zarówno RHR i mf (0/-1)
 		- czy definiuję tylko RHR (0/-1)
 		- czy definiuję tylko mf (0/-1)
-		'17.5' ???
+		- ciepło spalania paliwa [MJ/kg]
 		- współczynnik efektywności spalania
 		- model spalania (0 brak, 1 external flaming, 2 extended fire duration)
 		'19' ???
-		tabela krzywej rozwoju pożaru, dla poszczególnych rekordów:
-			- czas
-			- moc
-			- wypływ masy
-			- powierzchnia pożaru
-			
+		tabela krzywej rozwoju pożaru, dla poszczególnych rekordów: /dynamiczna/
+			- czas [s]
+			- moc [MW]
+			- wypływ masy [kg/s]
+			- powierzchnia pożaru [m2]
+	-------------------------------------------------
+		- wysokość pomieszczenia
+		- wysokość, na której porównuję temperatury
+		- odległość na OX punktu porównawczego
+		- ilość pożarów
+		- średnica pożaru 1
+		- odległość na OX pożaru 1
+		- odległość na OY pożaru 1 /te trzy dynamiczne/
+		- liczba rekordów hrr
+		tabela krzywej rozwoju pożaru, dla poszczególnych rekordów: /dynamiczna/
+			- czas [min]
+			- moc [MW]
      /dynamiczna ilość wierszy dostosowuje się do ilości rekordów
      słowa kluczowe Strategy, Parameters etc. rozdzielają sekcje o zmiennej długości/
      
 			
-			
-			
+    --------------------------------------------------
+    - /przed 'stochiometric coefficient' nr aneksu narodowego (' 10' - Polska)
+    - NFSC' (pożar wg annex E)
+	- maksymalna powierzchnia pożaru
+    - wysokość, na której jest paliwo
+    - SUG (0/1)
+    - niezależne zaopatrzenie wodne
+    - czujki ciepła
+    - czujki dymu
+    - monitoring PSP
+    - zakładowa SP
+    - Off site fire brigade
+    - bezpieczny dojazd
+    - klatki pod ciśnieniem
+    - urządzenia ppoż
+    - wentylacja pożarowa
+    - ???                  model spalania (0 brak, 1 external flaming, -1 extended fire duration)
+    - ???
+    - ciepło spalania paliwa
+    - współczynnik efektywności spalania
+    - ' 2' ???
+    - Rodzaj pomieszczenia (Library/Office/...)
+    - tempo rozprzestrzeniania się pożaru (Slow/Medium/Fast)
+    - HRRPUA [kw/m2]
+    - Obciążenie ogniowe [MJ/m2] fraktyl 80%
+    - niebezpieczeństwo zapłonu ???(0.85/1)
+    - '\n' x5 ???
+    - maksymalna powierzchnia pożaru
+
+    
 			
 
 			
@@ -432,7 +471,7 @@ Contour /zabezpieczenie/
 	- pozycja w katalogu
 
 	'0' ???
-	- rodzaj krzywej ogrzewania (Hot temperatura gazów, ISO, ASTME, Hydrocarbon)
+	- rodzaj krzywej ogrzewania (Hot temperatura gazów, ISO, ASTME, Hydrocarbon, Maximum)
 
 
 
