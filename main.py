@@ -20,7 +20,7 @@ class CreateOZN:
         self.sim_name = sim_name
         self.to_write = [0]     # 0 - column, 1 - beam
         self.floor = []
-        self.prof_type = 'HE 300 B'
+        self.prof_type = 'profile not found -- check .XEL file'
 
     def write_ozn(self):
         tab_new = []
