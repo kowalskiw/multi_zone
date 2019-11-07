@@ -1,18 +1,19 @@
 import json
 from copy import deepcopy as dc
 from numpy import array as npar
+from numpy import round as rnd
 
 
 class Partitioning:
     def __init__(self):
-        self.name = 'smyk_05'
+        self.name = 'smyk'
         with open('{}.json'.format(self.name)) as file:
             self.xel = json.load(file)
         self.geom = self.xel['geom']
         self.newgeom = dc(self.geom)
         # XA, XB, YA, YB
-        self.bounds = [0, 10, 0, 60]
-        self.begin = (22.0, 34.5)
+        self.bounds = [22, 101.7, -43.5, 34.5]
+        self.begin = (self.bounds[0], self.bounds[2])
 
     def prepare_area(self):
         self.cut()
@@ -71,15 +72,15 @@ class Partitioning:
             xes = self.newgeom['beams'][lvl]['X']
             yes = self.newgeom['beams'][lvl]['Y']
             for xbeam in range(len(xes)):
-                xes[xbeam] = list(npar(xes[xbeam]) + npar([0, self.begin[0], self.begin[1], self.begin[1]]))
+                xes[xbeam] = list(rnd(npar(xes[xbeam]) - npar([0, self.begin[0], self.begin[1], self.begin[1]]), 1))
 
             for ybeam in range(len(yes)):
-                yes[ybeam] = list(npar(yes[ybeam]) + npar([0, self.begin[1], self.begin[0], self.begin[0]]))
+                yes[ybeam] = list(rnd(npar(yes[ybeam]) - npar([0, self.begin[1], self.begin[0], self.begin[0]]), 1))
 
         for group in self.newgeom['cols']:
             cols = self.newgeom['cols'][group]
             for col in range(1, len(cols)):
-                cols[col] = list(npar(cols[col]) + npar(self.begin))
+                cols[col] = list(rnd(npar(cols[col]) - npar(self.begin), 1))
 
 
 Partitioning().prepare_area()

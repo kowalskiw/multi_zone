@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import json
 from math import ceil as cl
 
-name = 'smyk_05b'
+name = 'smykb'
 with open('{}.json'.format(name)) as file:
     xel = json.load(file)
 geom = xel['geom']

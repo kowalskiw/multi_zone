@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas import read_csv as rcsv
 from sys import argv
-from numpy import sqrt, random, log, pi
+from numpy import sqrt, random, log, pi, linalg
 import sqlite3 as sql
 
 
@@ -14,10 +14,9 @@ class CreateOZN:
     def __init__(self, ozone_path, results_path, config_path, sim_name):
         chdir(config_path)
         self.files = listdir(getcwd())
-        self.title = self.files[0].split('.')[0]
+        self.title = sim_name
         self.ozone_path = ozone_path
         self.results_path = results_path
-        self.sim_name = sim_name
         self.to_write = [0]     # 0 - column, 1 - beam
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
@@ -36,7 +35,7 @@ class CreateOZN:
         return self.to_write
 
     def geom(self):
-        with open(self.sim_name+'.geom', 'r') as file:
+        with open(self.title + '.geom', 'r') as file:
             geom_tab = file.readlines()
 
         [self.floor.append(float(i[:-1])) for i in geom_tab[3:5]]
@@ -44,14 +43,14 @@ class CreateOZN:
         return geom_tab[:6]
 
     def elements_dict(self):
-        with open(self.sim_name+'.xel', 'r') as file:
+        with open(self.title + '.xel', 'r') as file:
             construction = dict(js.load(file))
         return construction
 
     def material(self):
         tab_new = []
         ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()
-        with open(self.sim_name+'.mat', 'r') as file:
+        with open(self.title+'.mat', 'r') as file:
             my_mat = file.readlines()
 
         # when materials not from catalogue are used you need to write properties layer by layer
@@ -75,7 +74,7 @@ class CreateOZN:
         [no_open.append('\n') for i in range(60)]
 
         try:
-            with open(self.sim_name+'.op', 'r') as file:
+            with open(self.title + '.op', 'r') as file:
                 holes = js.load(file)
         except FileNotFoundError:
             print('There are no openings')
@@ -90,7 +89,7 @@ class CreateOZN:
     def ceiling(self):
         tab_new = []
         try:
-            with open(self.sim_name+'.cel', 'r') as file:
+            with open(self.title + '.cel', 'r') as file:
                 ceil = file.readlines()
         except FileNotFoundError:
             print('There is no horizontal natural ventilation')
@@ -104,7 +103,7 @@ class CreateOZN:
 
     def smoke_extractors(self):
         try:
-            with open(self.sim_name+'.ext', 'r') as file:
+            with open(self.title + '.ext', 'r') as file:
                 ext = file.readlines()
         except FileNotFoundError:
             print('There is no forced ventilation')
@@ -118,7 +117,7 @@ class CreateOZN:
 
         # fire randomizing function from Fires() class is called below
         
-        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).aflo2_fire(self.sim_name)
+        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).alfa_t2(self.title)
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -136,7 +135,7 @@ class CreateOZN:
         self.to_write.extend([xf, yf, zf, diam/2])
         tab_new.insert(0, '{}\n'.format(fuel_h[1] - zf))
 
-        xr, yr, zr = self.fire_place(xf, yf, diam, self.elements_dict(), fire_z=zf, element='b')
+        xr, yr, zr = self.fire_place2(xf, yf, self.elements_dict(), zf=zf, element='b')
         tab_new.insert(5, '{}\n'.format(diam))
         tab_new.insert(6, '{}\n'.format(round(xr, 2)))
         tab_new.insert(7, '{}\n'.format(round(yr, 2)))
@@ -200,14 +199,77 @@ class CreateOZN:
             print('there is a beam considered')
             return 0, dy, dz
 
+    def fire_place2(self, xf, yf, elements, element='b', zf=0):
+        # beams
+        if element == 'b':
+            above_lvl = max(elements['geom']['beams'])
+
+            def nearestb(axis_str, af, bf):
+                deltas = [999, 0]
+                for beam in elements['geom']['beams'][above_lvl][axis_str]:
+                    if beam[2] <= bf <= beam[3]:
+                        distx = af - beam[1]
+                        disty = 0
+                    else:
+                        distx = af - beam[1]
+                        disty = bf - max(beam[2], beam[3])
+                    if (distx**2 + disty**2)**0.5 < (deltas[0]**2 + deltas[1]**2)**0.5:
+                        deltas = [distx, disty]
+                        self.prof_type = elements['profiles'][int(beam[0])]
+                if axis_str == 'Y':
+                    deltas.reverse()
+                return deltas, (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5
+
+            nearestX = tuple(nearestb('X', xf, yf))
+            nearestY = tuple(nearestb('Y', yf, xf))
+            if nearestX[1] < nearestY[1]:
+                d_beam = (*nearestX[0], float(above_lvl) - zf)
+                self.to_write.append(nearestX[1])
+            else:
+                d_beam = (*nearestY[0], float(above_lvl) - zf)
+                self.to_write.append(nearestY[1])
+
+            return d_beam
+
+        # columns
+        elif element == 'c':
+            def nearestc(col_pos, fire_pos, d):
+                distx = fire_pos[0] - col_pos[0]
+                disty = fire_pos[1] - col_pos[1]
+                if (distx**2 + disty**2)**0.5 < (d[0]**2 + d[1]**2)**0.5:
+                    d = (distx, disty)
+                return d
+
+            prop_gr = ''
+            for group in elements['geom']['cols']:
+                zmin, zmax = group.split(',')
+                if float(zmin) <= zf <= float(zmax):
+                    prop_gr = group
+
+            if prop_gr == '':
+                prop_gr = list(elements['geom']['cols'].keys())[-1]
+
+                d_col = (999, 0)
+                for col in elements['geom']['cols'][prop_gr][1:]:
+                    d_col = (*nearestc(col, (xf, yf), d_col), zf - float(prop_gr.split(',')[1]))
+            else:
+                d_col = (999, 0, 1.2)
+                for col in elements['geom']['cols'][prop_gr][1:]:
+                    d_col = (*nearestc(col, (xf, yf), d_col[:-1]), zf + 1.2)
+
+            self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)
+            self.to_write[0] = 1
+
+            return d_col
+
     def strategy(self):
-        with open(self.sim_name+'.str', 'r') as file:
+        with open(self.title+'.str', 'r') as file:
             strat = file.readlines()
 
         return strat
 
     def parameters(self):
-        with open(self.sim_name+'.par', 'r') as file:
+        with open(self.title+'.par', 'r') as file:
             param = file.readlines()
 
         return param
@@ -362,29 +424,24 @@ class Main:
             to_write = CreateOZN(*self.paths).write_ozn()
 
             self.single_sim(to_write)
-            if to_write[0] == 0:
-                if (i + 1) % self.save_samp == 0:
-                    Export(self.results, self.paths[1]).csv_write('stoch_res')
-                    self.results.clear()
-                continue
 
             # change relative fire coordinates for the nearest column and run sim again
             print('\nSimulation #{}-a'.format(i))
-            print(to_write)
-            xr, yr, zr = CreateOZN(*self.paths).fire_place(
-                *to_write[2:4], to_write[5]*2, CreateOZN(*self.paths).elements_dict(), fire_z=to_write[4], element='c')
+
+            xr, yr, zr = CreateOZN(*self.paths).fire_place2(
+                *to_write[2:4], CreateOZN(*self.paths).elements_dict(), zf=to_write[4], element='c')
             to_write[0] = 0
             chdir(self.paths[1])
             with open('{}.ozn'.format(self.paths[-1])) as file:
                 ftab = file.readlines()
-            ftab[302] = '1.2\n'
+            ftab[302] = '{}\n'.format(zr)
             ftab[306] = '{}\n'.format(xr)
             ftab[307] = '{}\n'.format(yr)
             with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
                 file.writelines(ftab)
 
             self.single_sim(to_write)
-
+            print(self.results[-1][0] , self.results[-2][0])
             if self.results[-1][0] > self.results[-2][0]:
                 self.results.pop(-2)
             else:
@@ -401,10 +458,6 @@ class Main:
 
         # safe closing code:
         RunSim(*self.paths).close_ozn()
-
-        # creating distribution table
-        # Charting(self.paths[1]).test()
-        # Charting(self.paths[1]).ak_distr('stoch_res.csv', self.t_crit)
 
 
 '''set of charting functions for different purposes'''
@@ -650,23 +703,31 @@ class Fires:
             if hrr[-1] > hrr_max:
                 hrr[-1] = hrr_max
 
-
         return hrr, area, fuel_height, fuel_xes, fuel_yes
-    def alfa_t2 (self, name):
-        config = rcsv('{}.ful'.format(name), sep=',')
-        alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
-        hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
-        hrr_max = float(*config.hrr_max)
-        area = hrr_max/hrrpua
-        
+
+    def alfa_t2(self, name):
+        ffile = rcsv('{}.ful'.format(name), sep=',')
+        fire_site = (random.randint(0, len(ffile.index)))
+        config = ffile.iloc[fire_site]
+
+        fuel_xes = (config.XA, config.XB)
+        fuel_yes = (config.YA, config.YB)
+        fuel_zes = (config.ZA, config.ZB)
+
+        alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+
+        area = config.hrr_max/hrrpua
+
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
         for i in range(0, self.t_end + 1, 60):
             hrr.extend([i/60, round(alpha/1000 * (i ** 2), 4)])
-            if hrr[-1] > hrr_max:
-                hrr[-1] = hrr_max
+            if hrr[-1] > config.hrr_max:
+                hrr[-1] = config.hrr_max
                 
-        return hrr, area, fuel_height, fuel_xes, fuel_yes
+        return hrr, area, fuel_zes, fuel_xes, fuel_yes
+
 
 '''calculating critical temperature according to equation from Eurocode 3'''
 
@@ -677,7 +738,7 @@ def temp_crit(coef):
 
 def random_position(xes, yes, zes=(0, 1)):
     fire = []
-    [fire.append(random.randint(int(10 * float(i[0])), int(10 * float(i[1])))/10) for i in [xes, yes, zes]]
+    [fire.append(random.randint(int(10 * i[0]), int(10 * i[1]))/10) for i in [xes, yes, zes]]
 
     if zes == (0, 1):
         return fire[:-1]
@@ -691,14 +752,22 @@ def triangular(left, right, mode=False):
 
 
 if __name__ == '__main__':
-    cfd_folder = 'D:\CR_qsync\ED_\ '[:-1]+'02_cfd\ '[:-1]+'2019\ '[:-1]
-    task = 'dla_aq\ '[:-1]
-    series = 'little'
-    windows_paths = 'C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + task + series,\
-                    cfd_folder+task + 'config', series
+    config = argv[2]
+    with open('{}.user'.format(config)) as file:
+        config = file.readlines()
+    sim_folder = config[1].split(' -- ')[1][:-1]
+    results_folder = config[2][:-1]
+    # cfd_folder = 'D:\CR_qsync\ED_\ '[:-1]+'02_cfd\ '[:-1]+'2019\ '[:-1]
+    # task = 'dla_aq\ '[:-1]
+    # series = 'little'
+    windows_paths = []
+    [windows_paths.append(line.split(' -- ')[1][:-1]) for line in config]
+
+    # windows_paths = ['C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + task + series,\
+    #                 cfd_folder+task + 'config', series]
 
 # OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
-    # CreateOZN(*windows_paths).to_write()
-    Charting('D:\ozone_results\ '[:-1] + task + series).ak_distr(temp_crit(1))
+    # Charting('D:\ozone_results\ '[:-1] + task + series).ak_distr(temp_crit(1))
+    # CreateOZN(*windows_paths).write_ozn()
