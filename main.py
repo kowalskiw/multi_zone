@@ -202,7 +202,17 @@ class CreateOZN:
     def fire_place2(self, xf, yf, elements, element='b', zf=0):
         # beams
         if element == 'b':
-            above_lvl = max(elements['geom']['beams'])
+            above_lvl = 0
+            for lvl in elements['geom']['beams']:
+                if float(lvl) > zf:
+                    above_lvl = lvl
+                    break
+            if above_lvl == 0:
+                above_lvl = max(elements['geom']['beams'])
+                #dzs[abs(float(lvl)-zf)] = lvl
+            
+            #above_lvl = dzs[min(*dzs.keys())]
+            print(above_lvl)
 
             def nearestb(axis_str, af, bf):
                 deltas = [999, 0]
@@ -249,17 +259,19 @@ class CreateOZN:
             if prop_gr == '':
                 prop_gr = list(elements['geom']['cols'].keys())[-1]
 
-                d_col = (999, 0)
+                d_col = (999, 0, 1.2)
                 for col in elements['geom']['cols'][prop_gr][1:]:
-                    d_col = (*nearestc(col, (xf, yf), d_col), zf - float(prop_gr.split(',')[1]))
+                    d_col = (*nearestc(col, (xf, yf), d_col[:-1]), 1.2)#zf - float(prop_gr.split(',')[1]))
             else:
                 d_col = (999, 0, 1.2)
                 for col in elements['geom']['cols'][prop_gr][1:]:
-                    d_col = (*nearestc(col, (xf, yf), d_col[:-1]), zf + 1.2)
+                    d_col = (*nearestc(col, (xf, yf), d_col[:-1]), 1.2)
 
             self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)
             self.to_write[0] = 1
-
+            self.prof_type = elements['profiles'][int(elements['geom']['cols'][prop_gr][0])]
+            print(self.prof_type)
+            
             return d_col
 
     def strategy(self):
@@ -296,7 +308,8 @@ class CreateOZN:
                 [tab_new.append('{}\n'.format(i)) for i in [list(prof_dict.keys()).index(t), p.index(self.prof_type)]]
             except ValueError:
                 pass
-
+        
+        print(self.prof_type)
         tab_new.extend(['4 sides\n', 'Contour\n', 'Catalogue\n', 'Maximum\n'])
         [tab_new.insert(i, '0\n') for i in [8, 8, 11, 11, 11]]
         [tab_new.insert(i, '\n') for i in [9, 12, 12, 12]]
@@ -366,8 +379,9 @@ class Main:
     def __init__(self, paths):
         self.paths = paths
         self.results = []
-        self.t_crit = temp_crit(1)
-        self.save_samp = 1
+        self.t_crit = temp_crit(0.7)
+        self.save_samp = 2
+        self.sim_no = 0
 
     def add_data(self):
         steel_temp = []
@@ -375,6 +389,11 @@ class Main:
             stt = file.readlines()
         for i in stt[2:]:
             steel_temp.append((float(i.split()[0]), float(i.split()[2])))
+        for type in ['.ozn', '.stt', '.pri']:
+            with open('{}\{}{}'.format(self.paths[1], self.paths[-1], type)) as file:
+                to_save = file.read()
+            with open('{}\details\{}{}'.format(self.paths[1], self.sim_no, type), 'w') as file:
+                file.write(to_save)
         return steel_temp
 
     def choose_max(self):
@@ -388,15 +407,18 @@ class Main:
         int_step = 5
 
         print(stt)
-        
-        for i in stt:
-            if int(i[1]) >= self.t_crit:
+
+        stt_d = {}
+        for rec in stt:
+            stt_d[rec[0]] = rec[1]
+        for time, temp in stt_d.items():
+            if int(temp) >= self.t_crit:
                 # linear interpolation module, step of interpolation =int_step
-                t1, t2 = (int(i[1] - 60), int(i[1]))
+                t1, t2 = (int(stt_d[int(time)-60]), int(temp))
                 for j in range(int(60/int_step)):
                     interpolated = t1 + (t2 - t1) / 60 * int_step * j
                     if interpolated >= self.t_crit:
-                        return int(i[0]) + j * 5
+                        return int(time) - 60 + j * 5
         return 0
 
     def single_sim(self, export_list):
@@ -405,6 +427,9 @@ class Main:
 
         # writing results to results table
         self.results.append([self.choose_max(), self.choose_crit(), *export_list])
+        # only for validation
+        #Export(self.results, self.paths[1]).csv_write('stoch_rest')
+        #self.results.clear()
         # print(self.results[len(self.results) - 1])
         
     def get_results(self, n_sampl):
@@ -418,42 +443,51 @@ class Main:
 
         # !!!this is main loop for stochastic analyses!!!
         # n_sampl is quantity of repetitions
-        for i in range(int(n_sampl)):
-            print('\n\nSimulation #{}'.format(i))
-            # try:
+        for self.sim_no in range(int(n_sampl)):
+            print('\n\nSimulation #{}'.format(self.sim_no))
+            #try:
             to_write = CreateOZN(*self.paths).write_ozn()
 
             self.single_sim(to_write)
 
             # change relative fire coordinates for the nearest column and run sim again
-            print('\nSimulation #{}-a'.format(i))
-
-            xr, yr, zr = CreateOZN(*self.paths).fire_place2(
-                *to_write[2:4], CreateOZN(*self.paths).elements_dict(), zf=to_write[4], element='c')
-            to_write[0] = 0
+            self.sim_no = '{}a'.format(self.sim_no)
+            print('\nSimulation #{}'.format(self.sim_no))
+            
+            c = CreateOZN(*self.paths)
+            xr, yr, zr = c.fire_place2(
+                *to_write[2:4], c.elements_dict(), zf=to_write[4], element='c')
+            
+            to_write[0] = 1
             chdir(self.paths[1])
             with open('{}.ozn'.format(self.paths[-1])) as file:
                 ftab = file.readlines()
             ftab[302] = '{}\n'.format(zr)
             ftab[306] = '{}\n'.format(xr)
             ftab[307] = '{}\n'.format(yr)
+            prof_tab = c.profile()
+            for i in range(len(prof_tab)):
+                ftab[-18+i] = prof_tab[i]
             with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
                 file.writelines(ftab)
 
             self.single_sim(to_write)
-            print(self.results[-1][0] , self.results[-2][0])
+            print('beam: {}, col: {}'.format(self.results[-2][0] , self.results[-1][0]))
             if self.results[-1][0] > self.results[-2][0]:
                 self.results.pop(-2)
+            elif self.results[-1][0] == self.results[-2][0]:
+                if self.results[-1][1] < self.results[-2][1]:
+                    self.results.pop(-2)
             else:
                 self.results.pop(-1)
 
-            # except (KeyError, TypeError, ValueError):
-            #     self.results.append(['error'])
-            #     print('An error occured, simulation passed.')
+            #except (KeyError, TypeError, ValueError):
+            #    self.results.append(['error'])
+            #    print('An error occured, simulation passed.')
 
             # exporting results every (self.save_samp) repetitions
-            if (i+1) % self.save_samp == 0:
-                Export(self.results, self.paths[1]).csv_write('stoch_res')
+            if (int(self.sim_no.split('a')[0])+1) % self.save_samp == 0:
+                Export(self.results, self.paths[1]).csv_write('stoch_rest')
                 self.results.clear()
 
         # safe closing code:
@@ -466,7 +500,7 @@ class Main:
 class Charting:
     def __init__(self, res_path):
         chdir(res_path)
-        self.results = rcsv('stoch_res.csv', sep=',')
+        self.results = rcsv('stoch_rest.csv', sep=',')
 
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
@@ -501,7 +535,12 @@ class Charting:
 
     def ak_distr(self, t_crit):
         print(self.results)
-        prob = len(self.results.t_max[self.results.t_max < t_crit])/len(self.results.t_max)
+        err = 0
+        try:
+            prob = len(self.results.t_max[self.results.t_max < int(t_crit)])/len(self.results.t_max)
+        except TypeError:
+            err += 1
+            print('Number of errors = {}'.format(err))
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
         sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
@@ -751,6 +790,37 @@ def triangular(left, right, mode=False):
     return random.triangular(left, mode, right)
 
 
+def bound_valid(paths):
+    chdir(paths[1])
+    for x in [0, 8]:
+        with open('{}.ozn'.format(paths[3])) as file:
+            ozn = file.readlines()
+        ozn[307] = '{}\n'.format(x)
+            
+        with open('{}.ozn'.format(paths[3]), 'w') as file:
+            file.writelines(ozn) 
+        
+        for hrr_max in range(300):
+            alpha = 0.1876
+            tmax = int((hrr_max/alpha)**0.5)
+            diam = (4*hrr_max/1.65/3.1415)**0.5
+            hrr_tab = []
+            print(type(tmax), type(alpha))
+            [hrr_tab.extend([t, t^2*alpha]) for t in range(60, tmax, 60)]
+            hrr_tab.extend(['{}\n{}\n'.format(tmax, (tmax^2)*alpha)])
+            
+            with open('{}.ozn'.format(paths[3])) as file:
+                ozn = file.readlines()
+            ozn[305] = '{}\n'.format(diam)
+            hrr_tab.reverse()
+            [ozn.insert(308,rec) for rec in hrr_tab]
+            
+            with open('{}.ozn'.format(paths[3]), 'w') as file:
+                file.writelines(ozn)
+            RunSim(*paths).open_ozone()
+            Main(paths).single_sim([hrr_max, x])
+            RunSim().close_ozn()
+        
 if __name__ == '__main__':
     config = argv[2]
     with open('{}.user'.format(config)) as file:
@@ -763,11 +833,10 @@ if __name__ == '__main__':
     windows_paths = []
     [windows_paths.append(line.split(' -- ')[1][:-1]) for line in config]
 
-    # windows_paths = ['C:\Program Files (x86)\OZone 3', 'D:\ozone_results\ '[:-1] + task + series,\
-    #                 cfd_folder+task + 'config', series]
+    # windows_paths = [{0}'C:\Program Files (x86)\OZone 3', {1}'D:\ozone_results\ '[:-1] + task + series,\
+    #                 {2}cfd_folder+task + 'config', {3}series]
 
 # OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
-    # Charting('D:\ozone_results\ '[:-1] + task + series).ak_distr(temp_crit(1))
-    # CreateOZN(*windows_paths).write_ozn()
+    #bound_valid(windows_paths)
