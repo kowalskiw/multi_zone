@@ -6,8 +6,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from pandas import read_csv as rcsv
 from sys import argv
-from numpy import sqrt, random, log, pi, linalg
+from numpy import sqrt, random, log, pi
 import sqlite3 as sql
+from math import exp
+
+'''functions of CreateOZN class is related to another config file
+CreateOZN class prepares input file (.ozn) for every single simulation'''
 
 
 class CreateOZN:
@@ -17,15 +21,16 @@ class CreateOZN:
         self.title = sim_name
         self.ozone_path = ozone_path
         self.results_path = results_path
-        self.to_write = [0]     # 0 - column, 1 - beam
+        self.to_write = [0]  # 0 - column, 1 - beam
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
 
     def write_ozn(self):
         tab_new = []
-        [tab_new.extend(i) for i in [self.geom(), self.material(), self.openings(), '\n'*30, '0\n'*6, self.ceiling(),
-                                     self.smoke_extractors(), ['0\n', '1.27\n'], self.fire(), self.strategy(),
-                                     self.parameters(), self.profile()]]
+        [tab_new.extend(i) for i in
+         [self.geom(), self.material(), self.openings(), '\n' * 30, '0\n' * 6, self.ceiling(),
+          self.smoke_extractors(), ['0\n', '1.27\n'], self.fire(), self.strategy(),
+          self.parameters(), self.profile()]]
 
         chdir(self.results_path)
         with open(self.title + '.ozn', 'w') as ozn_file:
@@ -34,6 +39,7 @@ class CreateOZN:
             print('OZone simulation file (.ozn) has been written!')
         return self.to_write
 
+    # enclosure geometry
     def geom(self):
         with open(self.title + '.geom', 'r') as file:
             geom_tab = file.readlines()
@@ -42,15 +48,17 @@ class CreateOZN:
 
         return geom_tab[:6]
 
+    # reading steel construction geometry
     def elements_dict(self):
         with open(self.title + '.xel', 'r') as file:
             construction = dict(js.load(file))
         return construction
 
+    # walls, floor and ceiling materials
     def material(self):
         tab_new = []
         ozone_mat = open(self.ozone_path + '\OZone.sys').readlines()
-        with open(self.title+'.mat', 'r') as file:
+        with open(self.title + '.mat', 'r') as file:
             my_mat = file.readlines()
 
         # when materials not from catalogue are used you need to write properties layer by layer
@@ -69,6 +77,7 @@ class CreateOZN:
 
         return tab_new
 
+    # vertical openings (walls)
     def openings(self):
         no_open = []
         [no_open.append('\n') for i in range(60)]
@@ -81,11 +90,12 @@ class CreateOZN:
             return no_open
 
         for k, v in holes:
-            [no_open.insert((int(k)-1)*15 + (int(v)-1)*5 + c, str(holes[k+v][c]) + '\n') for c in range(5)]
+            [no_open.insert((int(k) - 1) * 15 + (int(v) - 1) * 5 + c, str(holes[k + v][c]) + '\n') for c in range(5)]
             # add hole parameters into proper indexes
 
-        return no_open[:60]             # cut unnecessary '\n' elements
+        return no_open[:60]  # cut unnecessary '\n' elements
 
+    # horizontal openings (ceiling)
     def ceiling(self):
         tab_new = []
         try:
@@ -98,9 +108,10 @@ class CreateOZN:
             return tab_new
 
         tab_new.extend(ceil)
-        [tab_new.append('\n') for i in range((3 - int(ceil[0]))*3)]
+        [tab_new.append('\n') for i in range((3 - int(ceil[0])) * 3)]
         return tab_new
 
+    # forced ventilation
     def smoke_extractors(self):
         try:
             with open(self.title + '.ext', 'r') as file:
@@ -111,17 +122,18 @@ class CreateOZN:
             [ext.append('\n') for i in range(12)]
         return ext
 
+    # fire parameters (curve, location)
     def fire(self):
 
         floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
 
         # fire randomizing function from Fires() class is called below
-        
+
         hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).alfa_t2(self.title)
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
-        diam = round(2*sqrt(area/pi), 2)
+        diam = round(2 * sqrt(area / pi), 2)
 
         # tab_new = [fire_type, distance_on_X_axis, number_of_fires]
         tab_new = ['Localised\n', '0\n', '1\n']
@@ -132,7 +144,7 @@ class CreateOZN:
 
         # overwriting absolute positions with relative ones
         xf, yf, zf = random_position(fuel_x, fuel_y, zes=fuel_h)
-        self.to_write.extend([xf, yf, zf, diam/2])
+        self.to_write.extend([xf, yf, zf, diam / 2])
         tab_new.insert(0, '{}\n'.format(fuel_h[1] - zf))
 
         xr, yr, zr = self.fire_place2(xf, yf, self.elements_dict(), zf=zf, element='b')
@@ -140,7 +152,7 @@ class CreateOZN:
         tab_new.insert(6, '{}\n'.format(round(xr, 2)))
         tab_new.insert(7, '{}\n'.format(round(yr, 2)))
         tab_new.insert(3, '{}\n'.format(zr))  # overwriting height of measures
-        tab_new.insert(9, '{}\n'.format(len(hrr)/2))
+        tab_new.insert(9, '{}\n'.format(len(hrr) / 2))
 
         return tab_new
 
@@ -164,22 +176,22 @@ class CreateOZN:
                 if dist == 0:
                     return 0
                 elif abs(1 / dist) > abs(delta):
-                    delta = 1/dist
+                    delta = 1 / dist
                 else:
-                    return 1/delta
-            return 1/delta
+                    return 1 / delta
+            return 1 / delta
 
         dz = nearest(fire_z, elements["geom"].keys(), positive=True)
         print('Zf', fire_z, 'dZ', dz, 'chosenZ: ', fire_z + dz)
         beams = elements["geom"]["{}".format(round(fire_z + dz, 1))]
         prof_list = elements["profiles"]
 
-        dy = nearest(yf, beams.keys())     #beam
+        dy = nearest(yf, beams.keys())  # beam
         print('Yf', yf, 'dY', dy, 'chosenY: ', yf + dy)
-        dx = nearest(xf, beams[str(round(yf + dy, 1))])     #column
+        dx = nearest(xf, beams[str(round(yf + dy, 1))])  # column
         print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
-        rad = f_d/2
-        dist = 2*(dx*dx + dy*dy)**0.5
+        rad = f_d / 2
+        dist = 2 * (dx * dx + dy * dy) ** 0.5
         self.to_write.append(dist)
         print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
 
@@ -199,6 +211,7 @@ class CreateOZN:
             print('there is a beam considered')
             return 0, dy, dz
 
+    # the newest function -- updated to 3D structure geometry from the myk branch (JSON syntax)
     def fire_place2(self, xf, yf, elements, element='b', zf=0):
         # beams
         if element == 'b':
@@ -209,9 +222,9 @@ class CreateOZN:
                     break
             if above_lvl == 0:
                 above_lvl = max(elements['geom']['beams'])
-                #dzs[abs(float(lvl)-zf)] = lvl
-            
-            #above_lvl = dzs[min(*dzs.keys())]
+                # dzs[abs(float(lvl)-zf)] = lvl
+
+            # above_lvl = dzs[min(*dzs.keys())]
             print(above_lvl)
 
             def nearestb(axis_str, af, bf):
@@ -223,7 +236,7 @@ class CreateOZN:
                     else:
                         distx = af - beam[1]
                         disty = bf - max(beam[2], beam[3])
-                    if (distx**2 + disty**2)**0.5 < (deltas[0]**2 + deltas[1]**2)**0.5:
+                    if (distx ** 2 + disty ** 2) ** 0.5 < (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5:
                         deltas = [distx, disty]
                         self.prof_type = elements['profiles'][int(beam[0])]
                 if axis_str == 'Y':
@@ -246,7 +259,7 @@ class CreateOZN:
             def nearestc(col_pos, fire_pos, d):
                 distx = fire_pos[0] - col_pos[0]
                 disty = fire_pos[1] - col_pos[1]
-                if (distx**2 + disty**2)**0.5 < (d[0]**2 + d[1]**2)**0.5:
+                if (distx ** 2 + disty ** 2) ** 0.5 < (d[0] ** 2 + d[1] ** 2) ** 0.5:
                     d = (distx, disty)
                 return d
 
@@ -261,7 +274,7 @@ class CreateOZN:
 
                 d_col = (999, 0, 1.2)
                 for col in elements['geom']['cols'][prop_gr][1:]:
-                    d_col = (*nearestc(col, (xf, yf), d_col[:-1]), 1.2)#zf - float(prop_gr.split(',')[1]))
+                    d_col = (*nearestc(col, (xf, yf), d_col[:-1]), 1.2)  # zf - float(prop_gr.split(',')[1]))
             else:
                 d_col = (999, 0, 1.2)
                 for col in elements['geom']['cols'][prop_gr][1:]:
@@ -271,21 +284,24 @@ class CreateOZN:
             self.to_write[0] = 1
             self.prof_type = elements['profiles'][int(elements['geom']['cols'][prop_gr][0])]
             print(self.prof_type)
-            
+
             return d_col
 
+    # raw OZone strategy section
     def strategy(self):
-        with open(self.title+'.str', 'r') as file:
+        with open(self.title + '.str', 'r') as file:
             strat = file.readlines()
 
         return strat
 
+    # raw OZone parameters section
     def parameters(self):
-        with open(self.title+'.par', 'r') as file:
+        with open(self.title + '.par', 'r') as file:
             param = file.readlines()
 
         return param
 
+    # choosing profile from catalogue
     def profile(self):
         tab_new = ['Steel\n', 'Unprotected\n', 'Catalogue\n']
         with open(self.ozone_path + '\Profiles.sys') as file:
@@ -308,7 +324,7 @@ class CreateOZN:
                 [tab_new.append('{}\n'.format(i)) for i in [list(prof_dict.keys()).index(t), p.index(self.prof_type)]]
             except ValueError:
                 pass
-        
+
         print(self.prof_type)
         tab_new.extend(['4 sides\n', 'Contour\n', 'Catalogue\n', 'Maximum\n'])
         [tab_new.insert(i, '0\n') for i in [8, 8, 11, 11, 11]]
@@ -320,7 +336,7 @@ class CreateOZN:
         return tab_new
 
 
-""""running simulation"""
+'''OZone simulation handling -- open, use and close the tool'''
 
 
 class RunSim:
@@ -329,7 +345,7 @@ class RunSim:
         chdir(config_path)
         self.sim_path = '{}\{}.ozn'.format(results_path, sim_name)
         self.keys = Controller()
-        self.hware_rate = 1     # this ratio sets times of waiting for your machine response
+        self.hware_rate = 1  # this ratio sets times of waiting for your machine response while running OZone
 
     def open_ozone(self):
         popen('{}\OZone.exe'.format(self.ozone_path))
@@ -337,12 +353,12 @@ class RunSim:
         time.sleep(0.5)
         self.keys.press(Key.right)
         self.keys.press(Key.enter)
-        time.sleep(7*self.hware_rate)
+        time.sleep(7 * self.hware_rate)
 
         print('OZone3 is running')
 
     def close_ozn(self):
-        time.sleep(1*self.hware_rate)
+        time.sleep(1 * self.hware_rate)
         with self.keys.pressed(Key.alt):
             self.keys.press(Key.f4)
 
@@ -356,13 +372,13 @@ class RunSim:
         keys.type(self.sim_path)
         time.sleep(1)
         keys.press(Key.enter)
-        time.sleep(4*self.hware_rate)
+        time.sleep(4 * self.hware_rate)
 
         # run "thermal action"
         with self.keys.pressed(Key.alt):
             self.keys.press('t')
         keys.press(Key.enter)
-        time.sleep(8*self.hware_rate)
+        time.sleep(8 * self.hware_rate)
 
         # run "steel temperature"
         with self.keys.pressed(Key.alt):
@@ -372,7 +388,7 @@ class RunSim:
         print('analises has been run')
 
 
-"""main class contains main  loop and results operations"""
+'''main class that contains main  loop and results operations'''
 
 
 class Main:
@@ -383,6 +399,7 @@ class Main:
         self.save_samp = 2
         self.sim_no = 0
 
+    # saving results to list and simulation's files to details subcatalogue
     def add_data(self):
         steel_temp = []
         with open(self.paths[1] + '\ '[0] + self.paths[3] + '.stt', 'r') as file:
@@ -397,7 +414,7 @@ class Main:
         return steel_temp
 
     def choose_max(self):
-        
+
         time, temp = zip(*self.add_data())
 
         return float(max(temp))
@@ -414,8 +431,8 @@ class Main:
         for time, temp in stt_d.items():
             if int(temp) >= self.t_crit:
                 # linear interpolation module, step of interpolation =int_step
-                t1, t2 = (int(stt_d[int(time)-60]), int(temp))
-                for j in range(int(60/int_step)):
+                t1, t2 = (int(stt_d[int(time) - 60]), int(temp))
+                for j in range(int(60 / int_step)):
                     interpolated = t1 + (t2 - t1) / 60 * int_step * j
                     if interpolated >= self.t_crit:
                         return int(time) - 60 + j * 5
@@ -427,11 +444,8 @@ class Main:
 
         # writing results to results table
         self.results.append([self.choose_max(), self.choose_crit(), *export_list])
-        # only for validation
-        #Export(self.results, self.paths[1]).csv_write('stoch_rest')
-        #self.results.clear()
-        # print(self.results[len(self.results) - 1])
-        
+
+    # main function
     def get_results(self, n_sampl):
 
         # randomize functions are out of this class, they are just recalled in CreateOZN.fire()
@@ -445,7 +459,7 @@ class Main:
         # n_sampl is quantity of repetitions
         for self.sim_no in range(int(n_sampl)):
             print('\n\nSimulation #{}'.format(self.sim_no))
-            #try:
+            # try:
             to_write = CreateOZN(*self.paths).write_ozn()
 
             self.single_sim(to_write)
@@ -453,11 +467,11 @@ class Main:
             # change relative fire coordinates for the nearest column and run sim again
             self.sim_no = '{}a'.format(self.sim_no)
             print('\nSimulation #{}'.format(self.sim_no))
-            
+
             c = CreateOZN(*self.paths)
             xr, yr, zr = c.fire_place2(
                 *to_write[2:4], c.elements_dict(), zf=to_write[4], element='c')
-            
+
             to_write[0] = 1
             chdir(self.paths[1])
             with open('{}.ozn'.format(self.paths[-1])) as file:
@@ -467,12 +481,13 @@ class Main:
             ftab[307] = '{}\n'.format(yr)
             prof_tab = c.profile()
             for i in range(len(prof_tab)):
-                ftab[-18+i] = prof_tab[i]
+                ftab[-18 + i] = prof_tab[i]
             with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
                 file.writelines(ftab)
 
+            # choosing worse scenario as single iteration output
             self.single_sim(to_write)
-            print('beam: {}, col: {}'.format(self.results[-2][0] , self.results[-1][0]))
+            print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
             if self.results[-1][0] > self.results[-2][0]:
                 self.results.pop(-2)
             elif self.results[-1][0] == self.results[-2][0]:
@@ -481,12 +496,12 @@ class Main:
             else:
                 self.results.pop(-1)
 
-            #except (KeyError, TypeError, ValueError):
+            # except (KeyError, TypeError, ValueError):
             #    self.results.append(['error'])
             #    print('An error occured, simulation passed.')
 
             # exporting results every (self.save_samp) repetitions
-            if (int(self.sim_no.split('a')[0])+1) % self.save_samp == 0:
+            if (int(self.sim_no.split('a')[0]) + 1) % self.save_samp == 0:
                 Export(self.results, self.paths[1]).csv_write('stoch_rest')
                 self.results.clear()
 
@@ -502,6 +517,7 @@ class Charting:
         chdir(res_path)
         self.results = rcsv('stoch_rest.csv', sep=',')
 
+    # old chart -- not used at the moment
     def distribution(self):
         temp, time, foo = zip(*self.results[1:])
         time_list = list(time)
@@ -533,11 +549,12 @@ class Charting:
 
         return [[no_collapse], times, probs]
 
+    # charts used for risk analysis
     def ak_distr(self, t_crit):
         print(self.results)
         err = 0
         try:
-            prob = len(self.results.t_max[self.results.t_max < int(t_crit)])/len(self.results.t_max)
+            prob = len(self.results.t_max[self.results.t_max < int(t_crit)]) / len(self.results.t_max)
         except TypeError:
             err += 1
             print('Number of errors = {}'.format(err))
@@ -557,12 +574,11 @@ class Charting:
         sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0])
         plt.savefig('dist_d.png')
 
-    def test(self):
-        plt.plot(range(10), self.results.t_max)
-        plt.show()
-
 
 '''exporting results to SQLite database'''
+
+
+# develop or abandon
 
 
 class Export:
@@ -586,7 +602,7 @@ class Export:
         conn.commit()
         # conn.close()
         print('results has been written to SQLite database')
-    
+
     def sql_read(self):
         conn = self.__sql_connect()
         conn.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
@@ -606,7 +622,7 @@ class Export:
         print('results has been written to CSV file')
 
 
-'''fire randomization class'''
+'''fire randomization class, which is recalled in CreateOZN.fire()'''
 
 
 class Fires:
@@ -664,24 +680,25 @@ class Fires:
 
         return hrr_list, area, fuel_h
 
+    # develop or abandon
     def user_def_fire(self):
-         tab_new = []
-         with open('udf_file', 'r') as file:
+        tab_new = []
+        with open('udf_file', 'r') as file:
             fire = file.readlines()
 
-         tab_new.extend(fire[:10])
-         max_area = int(fire[2][:2])
-         comb_eff = 0.8
-         comb_heat = float(fire[7][:-1])
-         max_hrr = float(fire[-1].split()[1])
+        tab_new.extend(fire[:10])
+        max_area = int(fire[2][:2])
+        comb_eff = 0.8
+        comb_heat = float(fire[7][:-1])
+        max_hrr = float(fire[-1].split()[1])
 
-         for line in fire[10:]:
-             time = float(line.split()[0])   # it may be easier way
-             hrr = float(line.split()[1])
-             mass_flux = round(hrr/comb_eff/comb_heat, ndigits=2)
-             area = round(max_area*hrr/max_hrr, ndigits=2)
+        for line in fire[10:]:
+            time = float(line.split()[0])  # it may be easier way
+            hrr = float(line.split()[1])
+            mass_flux = round(hrr / comb_eff / comb_heat, ndigits=2)
+            area = round(max_area * hrr / max_hrr, ndigits=2)
 
-         return hrr, mass_flux, area
+        return hrr, mass_flux, area
 
     def test_fire(self):
         hrr = [0, 0, 15, 40]
@@ -690,6 +707,7 @@ class Fires:
 
         return hrr, area, height
 
+    # develop or abandon
     def annex_fire(self, a_max, parameters):
         tab_new = ['NFSC\n', '{}\n'.format(a_max)]
         [tab_new.append('{}\n'.format(i)) for i in parameters]
@@ -700,6 +718,8 @@ class Fires:
 
         return tab_new
 
+    # fire curve accordant to New Zeland standard C/VM2 -- older version
+    # check&remove
     def aflo2_fire(self, name):
         fuel_height = (0.5, 18.5)
         fuel_xes = (0.5, 9.5)
@@ -710,40 +730,42 @@ class Fires:
         print(float(config.alpha_mode))
         alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
         hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
-        area = hrr_max/hrrpua
-        
+        area = hrr_max / hrrpua
+
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
         for i in range(0, self.t_end + 1, 60):
-            hrr.extend([i/60, round(alpha/1000 * (i ** 2), 4)])
+            hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
             if hrr[-1] > hrr_max:
                 hrr[-1] = hrr_max
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
+    # fire curve accordant to New Zeland standard C/VM2 -- newer version
+    # check&remove
     def aflo1_fire(self, name):
         fuel_height = (0.32, 34.1)
         fuel_xes = (0.3, 23.1)
         fuel_yes = (10.3, 101.7)
         hrr_max = 50
-        
+
         H = fuel_height[1] - fuel_height[0]
-        A_max = (fuel_xes[1] - fuel_xes[0])**2 * 3.1415 /4
-        
+        A_max = (fuel_xes[1] - fuel_xes[0]) ** 2 * 3.1415 / 4
+
         config = rcsv('{}.ful'.format(name), sep=',')
         alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
         area = triangular(0, A_max)
 
-        
-        print('alpha:{}, radius: {}'.format(alpha, (area/3.1415)**0.5))
+        print('alpha:{}, radius: {}'.format(alpha, (area / 3.1415) ** 0.5))
         hrr = []
         for i in range(0, self.t_end + 1, 60):
-            hrr.extend([i/60, round(H * alpha * (i ** 3)/1000, 4)])
+            hrr.extend([i / 60, round(H * alpha * (i ** 3) / 1000, 4)])
             if hrr[-1] > hrr_max:
                 hrr[-1] = hrr_max
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
+    # t-squared fire
     def alfa_t2(self, name):
         ffile = rcsv('{}.ful'.format(name), sep=',')
         fire_site = (random.randint(0, len(ffile.index)))
@@ -756,87 +778,120 @@ class Fires:
         alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
         hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
 
-        area = config.hrr_max/hrrpua
+        area = config.hrr_max / hrrpua
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
         for i in range(0, self.t_end + 1, 60):
-            hrr.extend([i/60, round(alpha/1000 * (i ** 2), 4)])
+            hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
             if hrr[-1] > config.hrr_max:
                 hrr[-1] = config.hrr_max
-                
+
+        return hrr, area, fuel_zes, fuel_xes, fuel_yes
+
+    # curve taking sprinklers into account
+    def sprink(self, name):
+        ffile = rcsv('{}.ful'.format(name), sep=',')
+        fire_site = (random.randint(0, len(ffile.index)))
+        config = ffile.iloc[fire_site]
+
+        fuel_xes = (config.XA, config.XB)
+        fuel_yes = (config.YA, config.YB)
+        fuel_zes = (config.ZA, config.ZB)
+
+        alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+
+        q_0 = alpha * config.t_sprink ** 2
+
+        area = q_0 / hrrpua
+
+        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
+        hrr = []
+        for t in range(0, self.t_end + 1, 60):
+
+            if t >= config.t_sprink:
+                q = q_0 * exp(-0.0024339414 * (t - config.t_sprink)) / 1000
+                # print(q_0)
+                # print(t, config.t_sprink, q)
+                if q >= q_0 * 0.00015:
+                    hrr.extend([t / 60, round(q, 4)])
+                else:
+                    hrr.extend([t / 60, round(q_0 * 0.00015, 4)])
+            else:
+                hrr.extend([t / 60, round(alpha / 1000 * (t ** 2), 4)])
+
         return hrr, area, fuel_zes, fuel_xes, fuel_yes
 
 
-'''calculating critical temperature according to equation from Eurocode 3'''
-
-
+# calculating critical temperature according to equation from Eurocode 3
 def temp_crit(coef):
     return 39.19 * log(1 / 0.9674 / coef ** 3.833 - 1) + 482
 
 
+# fire position sampler
 def random_position(xes, yes, zes=(0, 1)):
     fire = []
-    [fire.append(random.randint(int(10 * i[0]), int(10 * i[1]))/10) for i in [xes, yes, zes]]
+    [fire.append(random.randint(int(10 * i[0]), int(10 * i[1])) / 10) for i in [xes, yes, zes]]
 
     if zes == (0, 1):
         return fire[:-1]
     return fire
 
 
+# triangular distribution sampler
 def triangular(left, right, mode=False):
     if not mode:
         mode = (right - left) / 3 + left
     return random.triangular(left, mode, right)
 
 
+# validating function
+# develop or abandon
 def bound_valid(paths):
     chdir(paths[1])
     for x in [0, 8]:
         with open('{}.ozn'.format(paths[3])) as file:
             ozn = file.readlines()
         ozn[307] = '{}\n'.format(x)
-            
+
         with open('{}.ozn'.format(paths[3]), 'w') as file:
-            file.writelines(ozn) 
-        
+            file.writelines(ozn)
+
         for hrr_max in range(300):
             alpha = 0.1876
-            tmax = int((hrr_max/alpha)**0.5)
-            diam = (4*hrr_max/1.65/3.1415)**0.5
+            tmax = int((hrr_max / alpha) ** 0.5)
+            diam = (4 * hrr_max / 1.65 / 3.1415) ** 0.5
             hrr_tab = []
             print(type(tmax), type(alpha))
-            [hrr_tab.extend([t, t^2*alpha]) for t in range(60, tmax, 60)]
-            hrr_tab.extend(['{}\n{}\n'.format(tmax, (tmax^2)*alpha)])
-            
+            [hrr_tab.extend([t, t ^ 2 * alpha]) for t in range(60, tmax, 60)]
+            hrr_tab.extend(['{}\n{}\n'.format(tmax, (tmax ^ 2) * alpha)])
+
             with open('{}.ozn'.format(paths[3])) as file:
                 ozn = file.readlines()
             ozn[305] = '{}\n'.format(diam)
             hrr_tab.reverse()
-            [ozn.insert(308,rec) for rec in hrr_tab]
-            
+            [ozn.insert(308, rec) for rec in hrr_tab]
+
             with open('{}.ozn'.format(paths[3]), 'w') as file:
                 file.writelines(ozn)
             RunSim(*paths).open_ozone()
             Main(paths).single_sim([hrr_max, x])
             RunSim().close_ozn()
-        
+
+
 if __name__ == '__main__':
     config = argv[2]
     with open('{}.user'.format(config)) as file:
         config = file.readlines()
-    sim_folder = config[1].split(' -- ')[1][:-1]
-    results_folder = config[2][:-1]
-    # cfd_folder = 'D:\CR_qsync\ED_\ '[:-1]+'02_cfd\ '[:-1]+'2019\ '[:-1]
-    # task = 'dla_aq\ '[:-1]
-    # series = 'little'
     windows_paths = []
     [windows_paths.append(line.split(' -- ')[1][:-1]) for line in config]
 
     # windows_paths = [{0}'C:\Program Files (x86)\OZone 3', {1}'D:\ozone_results\ '[:-1] + task + series,\
     #                 {2}cfd_folder+task + 'config', {3}series]
 
-# OZone program folder, results folder, config folder, simulation name
+    # OZone program folder, results folder, config folder, simulation name
 
     Main(windows_paths).get_results(argv[1])
-    #bound_valid(windows_paths)
+    Charting(windows_paths[1]).ak_distr(526)
+    # bound_valid(windows_paths)
