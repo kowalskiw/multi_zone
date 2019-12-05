@@ -128,8 +128,8 @@ class CreateOZN:
         floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])
 
         # fire randomizing function from Fires() class is called below
-
-        hrr, area, fuel_h, fuel_x, fuel_y = Fires(floor_size, int(self.parameters()[6][:-1])).alfa_t2(self.title)
+        f = Fires(floor_size, int(self.parameters()[6][:-1]))
+        hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title)
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -392,12 +392,14 @@ class RunSim:
 
 
 class Main:
-    def __init__(self, paths):
+    def __init__(self, paths, rset):
         self.paths = paths
         self.results = []
-        self.t_crit = temp_crit(0.7)
+        self.t_crit = temp_crit(1)
         self.save_samp = 2
         self.sim_no = 0
+        self.to_write = []
+        self.rset = rset
 
     # saving results to list and simulation's files to details subcatalogue
     def add_data(self):
@@ -445,56 +447,64 @@ class Main:
         # writing results to results table
         self.results.append([self.choose_max(), self.choose_crit(), *export_list])
 
+    # changing coordinates to column
+    def b2c(self):
+        c = CreateOZN(*self.paths)
+        xr, yr, zr = c.fire_place2(
+            *self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
+
+        self.to_write[0] = 1
+        chdir(self.paths[1])
+        with open('{}.ozn'.format(self.paths[-1])) as file:
+            ftab = file.readlines()
+        ftab[302] = '{}\n'.format(zr)
+        ftab[306] = '{}\n'.format(xr)
+        ftab[307] = '{}\n'.format(yr)
+        prof_tab = c.profile()
+        for i in range(len(prof_tab)):
+            ftab[-18 + i] = prof_tab[i]
+        with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
+            file.writelines(ftab)
+
+    # choosing worse scenario
+    def worse(self):
+        if self.results[-1][0] > self.results[-2][0]:
+            self.results.pop(-2)
+        elif self.results[-1][0] == self.results[-2][0]:
+            if self.results[-1][1] < self.results[-2][1]:
+                self.results.pop(-2)
+        else:
+            self.results.pop(-1)
+
     # main function
-    def get_results(self, n_sampl):
+    def get_results(self, n_iter, rmse=False):
 
         # randomize functions are out of this class, they are just recalled in CreateOZN.fire()
 
         RunSim(*self.paths).open_ozone()
 
         # add headers to results table columns
-        self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius', 'distance'])
+        # self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius', 'distance'])
 
         # !!!this is main loop for stochastic analyses!!!
-        # n_sampl is quantity of repetitions
-        for self.sim_no in range(int(n_sampl)):
+        # n_iter is maximum number of iterations
+        for self.sim_no in range(int(n_iter)):
             print('\n\nSimulation #{}'.format(self.sim_no))
             # try:
-            to_write = CreateOZN(*self.paths).write_ozn()
+            self.to_write.clear()
+            self.to_write = CreateOZN(*self.paths).write_ozn()
 
-            self.single_sim(to_write)
+            self.single_sim(self.to_write)
 
             # change relative fire coordinates for the nearest column and run sim again
             self.sim_no = '{}a'.format(self.sim_no)
             print('\nSimulation #{}'.format(self.sim_no))
-
-            c = CreateOZN(*self.paths)
-            xr, yr, zr = c.fire_place2(
-                *to_write[2:4], c.elements_dict(), zf=to_write[4], element='c')
-
-            to_write[0] = 1
-            chdir(self.paths[1])
-            with open('{}.ozn'.format(self.paths[-1])) as file:
-                ftab = file.readlines()
-            ftab[302] = '{}\n'.format(zr)
-            ftab[306] = '{}\n'.format(xr)
-            ftab[307] = '{}\n'.format(yr)
-            prof_tab = c.profile()
-            for i in range(len(prof_tab)):
-                ftab[-18 + i] = prof_tab[i]
-            with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
-                file.writelines(ftab)
+            self.b2c()
+            self.single_sim(self.to_write)
 
             # choosing worse scenario as single iteration output
-            self.single_sim(to_write)
             print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
-            if self.results[-1][0] > self.results[-2][0]:
-                self.results.pop(-2)
-            elif self.results[-1][0] == self.results[-2][0]:
-                if self.results[-1][1] < self.results[-2][1]:
-                    self.results.pop(-2)
-            else:
-                self.results.pop(-1)
+            self.worse()
 
             # except (KeyError, TypeError, ValueError):
             #    self.results.append(['error'])
@@ -502,7 +512,12 @@ class Main:
 
             # exporting results every (self.save_samp) repetitions
             if (int(self.sim_no.split('a')[0]) + 1) % self.save_samp == 0:
-                Export(self.results, self.paths[1]).csv_write('stoch_rest')
+                e = Export(self.results, self.paths[1])
+                e.csv_write('stoch_rest')
+                # check if RMSE is low enough to stop simulation
+                if e.save(rset, self.t_crit) and rmse:
+                    print('Multisimulation finished due to RMSE condition')
+                    break
                 self.results.clear()
 
         # safe closing code:
@@ -550,32 +565,33 @@ class Charting:
         return [[no_collapse], times, probs]
 
     # charts used for risk analysis
-    def ak_distr(self, t_crit):
+    def ak_distr(self, t_crit, rset, p_coll, p_evac):
         print(self.results)
-        err = 0
-        try:
-            prob = len(self.results.t_max[self.results.t_max < int(t_crit)]) / len(self.results.t_max)
-        except TypeError:
-            err += 1
-            print('Number of errors = {}'.format(err))
+
         plt.figure(figsize=(12, 4))
         plt.subplot(121)
         sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
-                                kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Temperatura [°C]')
-
+                                kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Temperature [°C]')
         plt.axvline(x=t_crit, color='r')
-        plt.axhline(y=prob, color='r')
+        plt.axhline(y=p_coll, color='r')
+        plt.text(t_crit-0.05*max(self.results.t_max), 0.2, 't_crit', rotation=90)
+
         plt.subplot(122)
+        print(p_coll)
         sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0], hist_kws={'cumulative': True},
-                                kde_kws={'cumulative': True, 'label': 'Dystrybuanta'}, axlabel='Czas [s]')
+                                kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Time [s]')
+        plt.axvline(x=rset, color='r')
+        plt.axhline(y=p_evac, color='r')
+        plt.text(rset-0.05*max(self.results.time_crit[self.results.time_crit > 0]), 0.2, 'RSET', rotation=90)
         plt.savefig('dist_p.png')
 
         plt.figure()
-        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0])
+        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0],  axlabel='Czas [s]')
+        plt.axvline(x=rset, color='r')
         plt.savefig('dist_d.png')
 
 
-'''exporting results to SQLite database'''
+'''exporting results'''
 
 
 # develop or abandon
@@ -584,6 +600,7 @@ class Charting:
 class Export:
     def __init__(self, results, res_path):
         chdir(res_path)
+        self.c = Charting(res_path)
         self.res_tab = results
 
     def __sql_connect(self):
@@ -620,6 +637,45 @@ class Export:
         with open('{}.csv'.format(title), 'a+') as file:
             file.writelines(writelist)
         print('results has been written to CSV file')
+
+    def rmse(self, p, n):
+        return (p*(1-p)/n)**2
+
+    def save(self, rset, t_crit):
+        rset = int(rset)
+        t_crit = int(t_crit)
+
+        data = rcsv('stoch_rest.csv', sep=',')
+        num_nocoll = len(data.time_crit[data.time_crit == 0])
+        iter = len(data.t_max)
+        save_list = ["Results from {} iterations\n".format(iter)]
+
+        p_coll = len(data.t_max[data.t_max < int(t_crit)]) / len(data.t_max)
+        save_list.extend(['P(collapse) = {}\n'.format(1 - p_coll), 'RMSE={}\n'.format(self.rmse(p_coll, iter))])
+
+        print('t_crit={}'.format(t_crit))
+        print('p_coll={}'.format(p_coll))
+
+        try:
+            p_evac = (len(data.time_crit[data.time_crit <= int(rset)]) - num_nocoll) / (len(data.time_crit) - num_nocoll)
+            save_list.extend(['P(ASET < RSET) = {}\n'.format(p_evac), 'RMSE={}\n'.format(self.rmse(p_evac, iter))])
+        except ZeroDivisionError:
+            save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
+            p_evac = 0
+
+        with open('results.txt', 'w') as file:
+            file.writelines(save_list)
+
+        # draw charts
+        print('t_crit={}\nRSET={}'.format(t_crit, rset))
+        self.c.ak_distr(t_crit, rset, p_coll, p_evac)
+
+        # check if rmse is low enough to stop calculations
+        print(self.rmse(p_coll, iter)<0.001, self.rmse(p_evac, iter)<0.001)
+        if self.rmse(p_coll, iter) < 0.001 and self.rmse(p_evac, iter) < 0.001:
+            return True
+        else:
+            return False
 
 
 '''fire randomization class, which is recalled in CreateOZN.fire()'''
@@ -693,7 +749,7 @@ class Fires:
         max_hrr = float(fire[-1].split()[1])
 
         for line in fire[10:]:
-            time = float(line.split()[0])  # it may be easier way
+            time = float(line.split()[0])  # it may be an easier way
             hrr = float(line.split()[1])
             mass_flux = round(hrr / comb_eff / comb_heat, ndigits=2)
             area = round(max_area * hrr / max_hrr, ndigits=2)
@@ -876,22 +932,23 @@ def bound_valid(paths):
             with open('{}.ozn'.format(paths[3]), 'w') as file:
                 file.writelines(ozn)
             RunSim(*paths).open_ozone()
-            Main(paths).single_sim([hrr_max, x])
-            RunSim().close_ozn()
+            Main(paths, 300).single_sim([hrr_max, x])
+            RunSim(*paths).close_ozn()
 
 
 if __name__ == '__main__':
     config = argv[2]
+    rset = argv[3]
     with open('{}.user'.format(config)) as file:
         config = file.readlines()
     windows_paths = []
-    [windows_paths.append(line.split(' -- ')[1][:-1]) for line in config]
+    [windows_paths.append(line.split(' -- ')[1][:-1]) for line in config[:-1]]
 
     # windows_paths = [{0}'C:\Program Files (x86)\OZone 3', {1}'D:\ozone_results\ '[:-1] + task + series,\
     #                 {2}cfd_folder+task + 'config', {3}series]
 
     # OZone program folder, results folder, config folder, simulation name
 
-    Main(windows_paths).get_results(argv[1])
-    Charting(windows_paths[1]).ak_distr(526)
-    # bound_valid(windows_paths)
+    Main(windows_paths, rset).get_results(argv[1], rmse=True)
+    # Export([], windows_paths[1]).save('350', '526')
+
