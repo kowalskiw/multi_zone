@@ -400,6 +400,7 @@ class Main:
         self.sim_no = 0
         self.to_write = []
         self.rset = rset
+        self.falses = 0
 
     # saving results to list and simulation's files to details subcatalogue
     def add_data(self):
@@ -476,6 +477,14 @@ class Main:
         else:
             self.results.pop(-1)
 
+    # removing false results caused by OZone's "Loaded file" error
+    def remove_false(self):
+        if self.results[-2][4:8] == self.results[-1][4:8]:
+            self.results.pop(-1)
+            self.falses += 1
+            print('OZone error occured -- false results removed')
+            print('Till now {} errors like that have occured'.format(self.falses))
+
     # main function
     def get_results(self, n_iter, rmse=False):
 
@@ -484,7 +493,7 @@ class Main:
         RunSim(*self.paths).open_ozone()
 
         # add headers to results table columns
-        # self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius', 'distance'])
+        self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius', 'distance'])
 
         # !!!this is main loop for stochastic analyses!!!
         # n_iter is maximum number of iterations
@@ -502,9 +511,10 @@ class Main:
             self.b2c()
             self.single_sim(self.to_write)
 
-            # choosing worse scenario as single iteration output
+            # choosing worse scenario as single iteration output and checking its correctness
             print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
             self.worse()
+            self.remove_false()
 
             # except (KeyError, TypeError, ValueError):
             #    self.results.append(['error'])
@@ -515,7 +525,7 @@ class Main:
                 e = Export(self.results, self.paths[1])
                 e.csv_write('stoch_rest')
                 # check if RMSE is low enough to stop simulation
-                if e.save(rset, self.t_crit) and rmse:
+                if e.save(rset, self.t_crit, self.falses) and rmse:
                     print('Multisimulation finished due to RMSE condition')
                     break
                 self.results.clear()
@@ -641,7 +651,7 @@ class Export:
     def rmse(self, p, n):
         return (p*(1-p)/n)**2
 
-    def save(self, rset, t_crit):
+    def save(self, rset, t_crit, errors):
         rset = int(rset)
         t_crit = int(t_crit)
 
@@ -662,6 +672,8 @@ class Export:
         except ZeroDivisionError:
             save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
             p_evac = 0
+
+        save_list.append('{} OZone errors occured'.format(errors))
 
         with open('results.txt', 'w') as file:
             file.writelines(save_list)
