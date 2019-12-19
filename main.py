@@ -1,4 +1,4 @@
-from os import listdir, getcwd, chdir, popen
+from os import listdir, getcwd, chdir, popen, mkdir, path
 import json as js
 from pynput.keyboard import Key, Controller
 import time
@@ -21,11 +21,17 @@ class CreateOZN:
         self.title = sim_name
         self.ozone_path = ozone_path
         self.results_path = results_path
+        p_list = results_path.split('\ '[:-1]) + ['details']
+        for p in range(1, len(p_list)+1):
+            check = '\ '[:-1].join(p_list[:p])
+            if not path.exists(check):
+                mkdir(check)
         self.to_write = [0]  # 0 - column, 1 - beam
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
 
     def write_ozn(self):
+
         tab_new = []
         [tab_new.extend(i) for i in
          [self.geom(), self.material(), self.openings(), '\n' * 30, '0\n' * 6, self.ceiling(),
@@ -392,11 +398,11 @@ class RunSim:
 
 
 class Main:
-    def __init__(self, paths, rset):
+    def __init__(self, paths, rset, miu):
         self.paths = paths
         self.results = []
-        self.t_crit = temp_crit(1)
-        self.save_samp = 2
+        self.t_crit = temp_crit(miu)
+        self.save_samp = 10
         self.sim_no = 0
         self.to_write = []
         self.rset = rset
@@ -492,8 +498,6 @@ class Main:
 
         RunSim(*self.paths).open_ozone()
 
-        # add headers to results table columns
-        self.results.insert(0, ['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius', 'distance'])
 
         # !!!this is main loop for stochastic analyses!!!
         # n_iter is maximum number of iterations
@@ -514,7 +518,10 @@ class Main:
             # choosing worse scenario as single iteration output and checking its correctness
             print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
             self.worse()
-            self.remove_false()
+            try:
+                self.remove_false()
+            except IndexError:
+                pass
 
             # except (KeyError, TypeError, ValueError):
             #    self.results.append(['error'])
@@ -610,7 +617,7 @@ class Charting:
 class Export:
     def __init__(self, results, res_path):
         chdir(res_path)
-        self.c = Charting(res_path)
+        self.r_p = res_path
         self.res_tab = results
 
     def __sql_connect(self):
@@ -638,14 +645,16 @@ class Export:
 
     def csv_write(self, title):
         writelist = []
-
         for i in self.res_tab:
             for j in range(len(i)):
                 i[j] = str(i[j])
             writelist.append(','.join(i) + '\n')
-
-        with open('{}.csv'.format(title), 'a+') as file:
+        if '{}.csv'.format(title) not in listdir('.'):
+            writelist.insert(0, ','.join(['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius',
+                                          'distance\n']))
+        with open('{}.csv'.format(title), 'a') as file:
             file.writelines(writelist)
+
         print('results has been written to CSV file')
 
     def rmse(self, p, n):
@@ -680,11 +689,13 @@ class Export:
 
         # draw charts
         print('t_crit={}\nRSET={}'.format(t_crit, rset))
-        self.c.ak_distr(t_crit, rset, p_coll, p_evac)
+        Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
 
         # check if rmse is low enough to stop calculations
-        print(self.rmse(p_coll, iter)<0.001, self.rmse(p_evac, iter)<0.001)
-        if self.rmse(p_coll, iter) < 0.001 and self.rmse(p_evac, iter) < 0.001:
+        rmses = []
+        [rmses.append(self.rmse(i, iter)) for i in [p_coll, p_evac]]
+        print('RMSE_coll = {}\n RMSE_evac = {}'.format(*rmses))
+        if 0 < rmses[0] < 0.001 and 0 < rmses[1] < 0.001:
             return True
         else:
             return False
@@ -916,51 +927,50 @@ def triangular(left, right, mode=False):
 
 # validating function
 # develop or abandon
-def bound_valid(paths):
-    chdir(paths[1])
-    for x in [0, 8]:
-        with open('{}.ozn'.format(paths[3])) as file:
-            ozn = file.readlines()
-        ozn[307] = '{}\n'.format(x)
-
-        with open('{}.ozn'.format(paths[3]), 'w') as file:
-            file.writelines(ozn)
-
-        for hrr_max in range(300):
-            alpha = 0.1876
-            tmax = int((hrr_max / alpha) ** 0.5)
-            diam = (4 * hrr_max / 1.65 / 3.1415) ** 0.5
-            hrr_tab = []
-            print(type(tmax), type(alpha))
-            [hrr_tab.extend([t, t ^ 2 * alpha]) for t in range(60, tmax, 60)]
-            hrr_tab.extend(['{}\n{}\n'.format(tmax, (tmax ^ 2) * alpha)])
-
-            with open('{}.ozn'.format(paths[3])) as file:
-                ozn = file.readlines()
-            ozn[305] = '{}\n'.format(diam)
-            hrr_tab.reverse()
-            [ozn.insert(308, rec) for rec in hrr_tab]
-
-            with open('{}.ozn'.format(paths[3]), 'w') as file:
-                file.writelines(ozn)
-            RunSim(*paths).open_ozone()
-            Main(paths, 300).single_sim([hrr_max, x])
-            RunSim(*paths).close_ozn()
+# def bound_valid(paths):
+#     chdir(paths[1])
+#     for x in [0, 8]:
+#         with open('{}.ozn'.format(paths[3])) as file:
+#             ozn = file.readlines()
+#         ozn[307] = '{}\n'.format(x)
+#
+#         with open('{}.ozn'.format(paths[3]), 'w') as file:
+#             file.writelines(ozn)
+#
+#         for hrr_max in range(300):
+#             alpha = 0.1876
+#             tmax = int((hrr_max / alpha) ** 0.5)
+#             diam = (4 * hrr_max / 1.65 / 3.1415) ** 0.5
+#             hrr_tab = []
+#             print(type(tmax), type(alpha))
+#             [hrr_tab.extend([t, t ^ 2 * alpha]) for t in range(60, tmax, 60)]
+#             hrr_tab.extend(['{}\n{}\n'.format(tmax, (tmax ^ 2) * alpha)])
+#
+#             with open('{}.ozn'.format(paths[3])) as file:
+#                 ozn = file.readlines()
+#             ozn[305] = '{}\n'.format(diam)
+#             hrr_tab.reverse()
+#             [ozn.insert(308, rec) for rec in hrr_tab]
+#
+#             with open('{}.ozn'.format(paths[3]), 'w') as file:
+#                 file.writelines(ozn)
+#             RunSim(*paths).open_ozone()
+#             Main(paths, 300).single_sim([hrr_max, x])
+#             RunSim(*paths).close_ozn()
 
 
 if __name__ == '__main__':
-    config = argv[2]
-    rset = argv[3]
-    with open('{}.user'.format(config)) as file:
-        config = file.readlines()
-    windows_paths = []
-    [windows_paths.append(line.split(' -- ')[1][:-1]) for line in config[:-1]]
+    with open('{}.user'.format(argv[1])) as file:
+        user = []
+        [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
+        print(user)
+    rset = int(user[6])
 
     # windows_paths = [{0}'C:\Program Files (x86)\OZone 3', {1}'D:\ozone_results\ '[:-1] + task + series,\
     #                 {2}cfd_folder+task + 'config', {3}series]
 
     # OZone program folder, results folder, config folder, simulation name
 
-    Main(windows_paths, rset).get_results(argv[1], rmse=True)
-    # Export([], windows_paths[1]).save('350', '526')
+    Main(user[:4], int(user[6]), float(user[5])).get_results(int(user[7]), rmse=True)
+    # Export([], windows_paths[1]).save('300', '526', 0)
 

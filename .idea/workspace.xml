@@ -32,7 +32,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/geom_part.py" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="restartRequiresConfirmation" value="false" />
     <property name="settings.editor.selected.configurable" value="editor.preferences.fonts.default" />
   </component>
@@ -97,7 +97,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
-      <option name="PARAMETERS" value="10 user 350" />
+      <option name="PARAMETERS" value="user" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -327,30 +327,50 @@
     <option name="LAST_COMMIT_MESSAGE" value="Not-engulfed element situation changed&#10;&#10;In this case tool calculates also the nearest column and compares both&#10;due to slight differences when compartment is high." />
   </component>
   <component name="WindowStateProjectService">
-    <state x="1668" y="-440" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1575562914152">
+    <state x="1668" y="-440" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1576777886368">
       <screen x="1366" y="-729" width="1680" height="1010" />
     </state>
-    <state x="1668" y="-440" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1575562914152" />
+    <state x="1668" y="-440" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777886368" />
     <state x="1831" y="-661" key="CommitChangelistDialog2" timestamp="1575564605561">
       <screen x="1366" y="-729" width="1680" height="1010" />
     </state>
     <state x="1831" y="-661" key="CommitChangelistDialog2/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1575564605561" />
-    <state width="1659" height="243" key="GridCell.Tab.0.bottom" timestamp="1575564365637">
+    <state x="1985" y="-483" key="FileChooserDialogImpl" timestamp="1576514879365">
       <screen x="1366" y="-729" width="1680" height="1010" />
     </state>
-    <state width="1659" height="243" key="GridCell.Tab.0.bottom/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1575564365637" />
-    <state width="1659" height="243" key="GridCell.Tab.0.center" timestamp="1575564365637">
+    <state x="1985" y="-483" key="FileChooserDialogImpl/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576514879365" />
+    <state width="1375" height="220" key="GridCell.Tab.0.bottom" timestamp="1576777898100">
       <screen x="1366" y="-729" width="1680" height="1010" />
     </state>
-    <state width="1659" height="243" key="GridCell.Tab.0.center/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1575564365637" />
-    <state width="1659" height="243" key="GridCell.Tab.0.left" timestamp="1575564365637">
+    <state width="1375" height="220" key="GridCell.Tab.0.bottom/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777898100" />
+    <state width="1375" height="220" key="GridCell.Tab.0.center" timestamp="1576777898100">
       <screen x="1366" y="-729" width="1680" height="1010" />
     </state>
-    <state width="1659" height="243" key="GridCell.Tab.0.left/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1575564365637" />
-    <state width="1659" height="243" key="GridCell.Tab.0.right" timestamp="1575564365637">
+    <state width="1375" height="220" key="GridCell.Tab.0.center/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777898100" />
+    <state width="1375" height="220" key="GridCell.Tab.0.left" timestamp="1576777898100">
       <screen x="1366" y="-729" width="1680" height="1010" />
     </state>
-    <state width="1659" height="243" key="GridCell.Tab.0.right/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1575564365637" />
+    <state width="1375" height="220" key="GridCell.Tab.0.left/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777898100" />
+    <state width="1375" height="220" key="GridCell.Tab.0.right" timestamp="1576777898100">
+      <screen x="1366" y="-729" width="1680" height="1010" />
+    </state>
+    <state width="1375" height="220" key="GridCell.Tab.0.right/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777898100" />
+    <state width="1375" height="402" key="GridCell.Tab.1.bottom" timestamp="1576777799431">
+      <screen x="1366" y="-729" width="1680" height="1010" />
+    </state>
+    <state width="1375" height="402" key="GridCell.Tab.1.bottom/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777799431" />
+    <state width="1375" height="402" key="GridCell.Tab.1.center" timestamp="1576777799431">
+      <screen x="1366" y="-729" width="1680" height="1010" />
+    </state>
+    <state width="1375" height="402" key="GridCell.Tab.1.center/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777799430" />
+    <state width="1375" height="402" key="GridCell.Tab.1.left" timestamp="1576777799430">
+      <screen x="1366" y="-729" width="1680" height="1010" />
+    </state>
+    <state width="1375" height="402" key="GridCell.Tab.1.left/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777799430" />
+    <state width="1375" height="402" key="GridCell.Tab.1.right" timestamp="1576777799431">
+      <screen x="1366" y="-729" width="1680" height="1010" />
+    </state>
+    <state width="1375" height="402" key="GridCell.Tab.1.right/0.0.1366.728/1366.-729.1680.1010@1366.-729.1680.1010" timestamp="1576777799431" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -379,6 +399,26 @@
           <url>file://$PROJECT_DIR$/geom_check.py</url>
           <line>33</line>
           <option name="timeStamp" value="41" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>27</line>
+          <option name="timeStamp" value="42" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>24</line>
+          <option name="timeStamp" value="43" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>25</line>
+          <option name="timeStamp" value="44" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>26</line>
+          <option name="timeStamp" value="45" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>
