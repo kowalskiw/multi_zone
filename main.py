@@ -15,7 +15,7 @@ CreateOZN class prepares input file (.ozn) for every single simulation'''
 
 
 class CreateOZN:
-    def __init__(self, ozone_path, results_path, config_path, sim_name):
+    def __init__(self, ozone_path, results_path, config_path, sim_name, fire_type):
         chdir(config_path)
         self.files = listdir(getcwd())
         self.title = sim_name
@@ -29,6 +29,7 @@ class CreateOZN:
         self.to_write = [0]  # 0 - column, 1 - beam
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
+        self.f_type = fire_type
 
     def write_ozn(self):
 
@@ -135,7 +136,10 @@ class CreateOZN:
 
         # fire randomizing function from Fires() class is called below
         f = Fires(floor_size, int(self.parameters()[6][:-1]))
-        hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title)
+        if self.f_type == 'alfat2':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title)
+        elif self.f_type == 'alfat2_store':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -398,7 +402,7 @@ class RunSim:
 
 
 class Main:
-    def __init__(self, paths, rset, miu):
+    def __init__(self, paths, rset, miu, fire_type):
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
@@ -407,6 +411,7 @@ class Main:
         self.to_write = []
         self.rset = rset
         self.falses = 0
+        self.f_type = fire_type
 
     # saving results to list and simulation's files to details subcatalogue
     def add_data(self):
@@ -456,7 +461,7 @@ class Main:
 
     # changing coordinates to column
     def b2c(self):
-        c = CreateOZN(*self.paths)
+        c = CreateOZN(*self.paths, self.f_type)
         xr, yr, zr = c.fire_place2(
             *self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
 
@@ -505,7 +510,7 @@ class Main:
             print('\n\nSimulation #{}'.format(self.sim_no))
             # try:
             self.to_write.clear()
-            self.to_write = CreateOZN(*self.paths).write_ozn()
+            self.to_write = CreateOZN(*self.paths, self.f_type).write_ozn()
 
             self.single_sim(self.to_write)
 
@@ -845,7 +850,7 @@ class Fires:
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
     # t-squared fire
-    def alfa_t2(self, name):
+    def alfa_t2(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
         fire_site = (random.randint(0, len(ffile.index)))
         config = ffile.iloc[fire_site]
@@ -854,7 +859,10 @@ class Fires:
         fuel_yes = (config.YA, config.YB)
         fuel_zes = (config.ZA, config.ZB)
 
-        alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+        if not property:
+            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+        elif property == 'store':
+            alpha = random.lognormal(-9.72, 0.97)
         hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
 
         area = config.hrr_max / hrrpua
@@ -960,7 +968,8 @@ def triangular(left, right, mode=False):
 
 
 if __name__ == '__main__':
-    with open('{}.user'.format(argv[1])) as file:
+    chdir(argv[1])
+    with open('{}.user'.format(argv[2])) as file:
         user = []
         [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
         print(user)
@@ -971,6 +980,6 @@ if __name__ == '__main__':
 
     # OZone program folder, results folder, config folder, simulation name
 
-    Main(user[:4], int(user[6]), float(user[5])).get_results(int(user[7]), rmse=True)
+    Main(user[:4], int(user[6]), float(user[5]), user[4]).get_results(int(user[7]), rmse=True)
     # Export([], windows_paths[1]).save('300', '526', 0)
 

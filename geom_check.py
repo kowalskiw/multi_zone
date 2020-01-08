@@ -1,8 +1,12 @@
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle as rect
 import json
 from math import ceil as cl
+from pandas import read_csv as rcsv
+from matplotlib.collections import PatchCollection
+import numpy as np
 
-name = 'smykb'
+name = 'dcth_ant'
 with open('{}.json'.format(name)) as file:
     xel = json.load(file)
 geom = xel['geom']
@@ -35,4 +39,20 @@ for lvl in levels:
         plt.grid(True)
 
 plt.savefig('geom.png')
+# plt.show()
+
+fig, ax = plt.subplots()
+
+with open('{}.ful'.format(name)) as file:
+    ful = rcsv(file)
+patches = []
+for i, r in ful.iterrows():
+    patches.append(rect((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
+collection = PatchCollection(patches, alpha=0.8)
+ax.add_collection(collection)
+
+plt.axis('equal')
+plt.tight_layout()
+plt.grid(True)
+
 plt.show()
