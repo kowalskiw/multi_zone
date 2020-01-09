@@ -859,11 +859,12 @@ class Fires:
         fuel_yes = (config.YA, config.YB)
         fuel_zes = (config.ZA, config.ZB)
 
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+
         if not property:
             alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
         elif property == 'store':
-            alpha = random.lognormal(-9.72, 0.97)
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
 
         area = config.hrr_max / hrrpua
 
