@@ -140,6 +140,10 @@ class CreateOZN:
             hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title)
         elif self.f_type == 'alfat2_store':
             hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
+        elif self.f_type == 'sprink':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
+        elif self.f_type == 'sprink_store':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -804,7 +808,7 @@ class Fires:
 
     # fire curve accordant to New Zeland standard C/VM2 -- older version
     # check&remove
-    def aflo2_fire(self, name):
+    def newzealand1(self, name):
         fuel_height = (0.5, 18.5)
         fuel_xes = (0.5, 9.5)
         fuel_yes = (0.5, 19.5)
@@ -827,7 +831,7 @@ class Fires:
 
     # fire curve accordant to New Zeland standard C/VM2 -- newer version
     # check&remove
-    def aflo1_fire(self, name):
+    def newzealand2(self, name):
         fuel_height = (0.32, 34.1)
         fuel_xes = (0.3, 23.1)
         fuel_yes = (10.3, 101.7)
@@ -878,7 +882,7 @@ class Fires:
         return hrr, area, fuel_zes, fuel_xes, fuel_yes
 
     # curve taking sprinklers into account
-    def sprink(self, name):
+    def sprink_noeff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
         fire_site = (random.randint(0, len(ffile.index)))
         config = ffile.iloc[fire_site]
@@ -887,8 +891,43 @@ class Fires:
         fuel_yes = (config.YA, config.YB)
         fuel_zes = (config.ZA, config.ZB)
 
-        alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
         hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+
+        if not property:
+            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+        elif property == 'store':
+            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
+
+        q_0 = alpha * config.t_sprink ** 2
+
+        area = q_0 / hrrpua
+
+        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
+        hrr = []
+        for t in range(0, self.t_end + 1, 60):
+
+            if t >= config.t_sprink:
+                hrr.extend([t / 60, round(alpha / 1000 * (config.t_sprink ** 2), 4)])
+            else:
+                hrr.extend([t / 60, round(alpha / 1000 * (t ** 2), 4)])
+
+        return hrr, area, fuel_zes, fuel_xes, fuel_yes
+
+    def sprink_eff(self, name, property=None):
+        ffile = rcsv('{}.ful'.format(name), sep=',')
+        fire_site = (random.randint(0, len(ffile.index)))
+        config = ffile.iloc[fire_site]
+
+        fuel_xes = (config.XA, config.XB)
+        fuel_yes = (config.YA, config.YB)
+        fuel_zes = (config.ZA, config.ZB)
+
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+
+        if not property:
+            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+        elif property == 'store':
+            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
 
         q_0 = alpha * config.t_sprink ** 2
 
