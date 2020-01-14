@@ -687,9 +687,6 @@ class Export:
         p_coll = len(data.t_max[data.t_max < int(t_crit)]) / len(data.t_max)
         save_list.extend(['P(collapse) = {}\n'.format(1 - p_coll), 'RMSE={}\n'.format(self.rmse(p_coll, iter))])
 
-        print('t_crit={}'.format(t_crit))
-        print('p_coll={}'.format(p_coll))
-
         try:
             p_evac = (len(data.time_crit[data.time_crit <= int(rset)]) - num_nocoll) / (len(data.time_crit) - num_nocoll)
             save_list.extend(['P(ASET < RSET) = {}\n'.format(p_evac), 'RMSE={}\n'.format(self.rmse(p_evac, iter))])
@@ -704,8 +701,10 @@ class Export:
 
         # draw charts
         print('t_crit={}\nRSET={}'.format(t_crit, rset))
-        Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
-
+        try:
+            Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
+        except ValueError:
+            print('while drawing a chart error occured')
         # check if rmse is low enough to stop calculations
         rmses = []
         [rmses.append(self.rmse(i, iter)) for i in [p_coll, p_evac]]
