@@ -140,10 +140,16 @@ class CreateOZN:
             hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title)
         elif self.f_type == 'alfat2_store':
             hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
-        elif self.f_type == 'sprink':
-            hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
-        elif self.f_type == 'sprink_store':
-            hrr, area, fuel_h, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
+        elif self.f_type == 'sprink_eff':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.sprink_eff(self.title)
+        elif self.f_type == 'sprink_eff_store':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.sprink_eff(self.title, property='store')
+        elif self.f_type == 'sprink_noeff':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.sprink_noeff(self.title)
+        elif self.f_type == 'sprink_noeff_store':
+            hrr, area, fuel_h, fuel_x, fuel_y = f.sprink_noeff(self.title, property='store')
+        else:
+            print(KeyError, '{} is not a proper fire type'.format(self.f_type))
         self.to_write.append(hrr[-1])
 
         comp_h = self.geom()[2]
@@ -495,7 +501,7 @@ class Main:
     # removing false results caused by OZone's "Loaded file" error
     def remove_false(self):
         if self.results[-2][4:8] == self.results[-1][4:8]:
-            self.results.pop(-1)
+            [self.results.pop(-1) for i in range(2)]
             self.falses += 1
             print('OZone error occured -- false results removed')
             print('Till now {} errors like that have occured'.format(self.falses))
@@ -530,7 +536,7 @@ class Main:
             try:
                 self.remove_false()
             except IndexError:
-                pass
+                continue
 
             # except (KeyError, TypeError, ValueError):
             #    self.results.append(['error'])
