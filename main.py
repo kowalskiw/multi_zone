@@ -503,6 +503,7 @@ class Main:
         if self.results[-2][4:8] == self.results[-1][4:8]:
             [self.results.pop(-1) for i in range(2)]
             self.falses += 1
+            self.sim_no -= 1
             print('OZone error occured -- false results removed')
             print('Till now {} errors like that have occured'.format(self.falses))
 
