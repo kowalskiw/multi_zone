@@ -430,7 +430,7 @@ class Main:
             stt = file.readlines()
         for i in stt[2:]:
             steel_temp.append((float(i.split()[0]), float(i.split()[2])))
-        for type in ['.ozn', '.stt', '.pri']:
+        for type in ['.ozn', '.stt', '.pri', '.out']:
             with open('{}\{}{}'.format(self.paths[1], self.paths[-1], type)) as file:
                 to_save = file.read()
             with open('{}\details\{}{}'.format(self.paths[1], self.sim_no, type), 'w') as file:
@@ -503,9 +503,10 @@ class Main:
         if self.results[-2][4:8] == self.results[-1][4:8]:
             [self.results.pop(-1) for i in range(2)]
             self.falses += 1
-            self.sim_no -= 1
             print('OZone error occured -- false results removed')
             print('Till now {} errors like that have occured'.format(self.falses))
+            return True
+        return False
 
     # main function
     def get_results(self, n_iter, rmse=False):
@@ -514,34 +515,37 @@ class Main:
 
         RunSim(*self.paths).open_ozone()
 
-
         # !!!this is main loop for stochastic analyses!!!
         # n_iter is maximum number of iterations
         for self.sim_no in range(int(n_iter)):
-            print('\n\nSimulation #{}'.format(self.sim_no))
-            # try:
-            self.to_write.clear()
-            self.to_write = CreateOZN(*self.paths, self.f_type).write_ozn()
+            while True:
+                print('\n\nSimulation #{}'.format(self.sim_no))
+                # try:
+                self.to_write.clear()
+                self.to_write = CreateOZN(*self.paths, self.f_type).write_ozn()
 
-            self.single_sim(self.to_write)
+                self.single_sim(self.to_write)
 
-            # change relative fire coordinates for the nearest column and run sim again
-            self.sim_no = '{}a'.format(self.sim_no)
-            print('\nSimulation #{}'.format(self.sim_no))
-            self.b2c()
-            self.single_sim(self.to_write)
+                # change relative fire coordinates for the nearest column and run sim again
+                self.sim_no = '{}a'.format(self.sim_no)
+                print('\nSimulation #{}'.format(self.sim_no))
+                self.b2c()
+                self.single_sim(self.to_write)
 
-            # choosing worse scenario as single iteration output and checking its correctness
-            print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
-            self.worse()
-            try:
-                self.remove_false()
-            except IndexError:
-                continue
+                # choosing worse scenario as single iteration output and checking its correctness
+                print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
+                self.worse()
 
-            # except (KeyError, TypeError, ValueError):
-            #    self.results.append(['error'])
-            #    print('An error occured, simulation passed.')
+                try:
+                    if self.remove_false() and len(self.sim_no) > 10:
+                        print('Too many errors occured. Restarting OZone 3!')
+                        RunSim(*self.paths).close_ozn()
+                        RunSim(*self.paths).open_ozone()
+                        continue
+                except IndexError:
+                    break
+                else:
+                    break
 
             # exporting results every (self.save_samp) repetitions
             if (int(self.sim_no.split('a')[0]) + 1) % self.save_samp == 0:
@@ -706,6 +710,7 @@ class Export:
             Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
         except ValueError:
             print('while drawing a chart error occured')
+            return False
         # check if rmse is low enough to stop calculations
         rmses = []
         [rmses.append(self.rmse(i, iter)) for i in [p_coll, p_evac]]
