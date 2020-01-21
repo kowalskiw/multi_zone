@@ -176,60 +176,60 @@ class CreateOZN:
 
         return tab_new
 
-    # sets fire position relatively to the nearest element
-    def fire_place(self, xf, yf, f_d, elements, element='b', fire_z=0):
-        def nearest(src, tab, positive=False):
-            delta = 0
-
-            for k in tab:
-                try:
-                    dist = float(k) - src
-                except ValueError:
-                    continue
-
-                if positive and dist < 0:
-                    delta = 1 / dist
-                    continue
-                elif positive:
-                    return dist
-
-                if dist == 0:
-                    return 0
-                elif abs(1 / dist) > abs(delta):
-                    delta = 1 / dist
-                else:
-                    return 1 / delta
-            return 1 / delta
-
-        dz = nearest(fire_z, elements["geom"].keys(), positive=True)
-        print('Zf', fire_z, 'dZ', dz, 'chosenZ: ', fire_z + dz)
-        beams = elements["geom"]["{}".format(round(fire_z + dz, 1))]
-        prof_list = elements["profiles"]
-
-        dy = nearest(yf, beams.keys())  # beam
-        print('Yf', yf, 'dY', dy, 'chosenY: ', yf + dy)
-        dx = nearest(xf, beams[str(round(yf + dy, 1))])  # column
-        print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
-        rad = f_d / 2
-        dist = 2 * (dx * dx + dy * dy) ** 0.5
-        self.to_write.append(dist)
-        print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
-
-        if element == 'c':
-            print('there is a column considered')
-            self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
-            return dx, dy, 1.2
-        else:
-            self.to_write[0] = 1
-            try:
-                self.prof_type = prof_list[beams[str(round(yf + dy, 1))]["b"]]
-            except KeyError:
-                self.to_write[0] = 0
-                print('there is a column considered --> we have no beam above')
-                self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
-                return dx, dy, 1.2
-            print('there is a beam considered')
-            return 0, dy, dz
+    # # sets fire position relatively to the nearest element
+    # def fire_place(self, xf, yf, f_d, elements, element='b', fire_z=0):
+    #     def nearest(src, tab, positive=False):
+    #         delta = 0
+    #
+    #         for k in tab:
+    #             try:
+    #                 dist = float(k) - src
+    #             except ValueError:
+    #                 continue
+    #
+    #             if positive and dist < 0:
+    #                 delta = 1 / dist
+    #                 continue
+    #             elif positive:
+    #                 return dist
+    #
+    #             if dist == 0:
+    #                 return 0
+    #             elif abs(1 / dist) > abs(delta):
+    #                 delta = 1 / dist
+    #             else:
+    #                 return 1 / delta
+    #         return 1 / delta
+    #
+    #     dz = nearest(fire_z, elements["geom"].keys(), positive=True)
+    #     print('Zf', fire_z, 'dZ', dz, 'chosenZ: ', fire_z + dz)
+    #     beams = elements["geom"]["{}".format(round(fire_z + dz, 1))]
+    #     prof_list = elements["profiles"]
+    #
+    #     dy = nearest(yf, beams.keys())  # beam
+    #     print('Yf', yf, 'dY', dy, 'chosenY: ', yf + dy)
+    #     dx = nearest(xf, beams[str(round(yf + dy, 1))])  # column
+    #     print('Xf', xf, 'dX', dx, 'chosenX: ', xf + dx)
+    #     rad = f_d / 2
+    #     dist = 2 * (dx * dx + dy * dy) ** 0.5
+    #     self.to_write.append(dist)
+    #     print('Diameter: {}  Radius: {}  Distance: {}'.format(2 * rad, rad, dist))
+    #
+    #     if element == 'c':
+    #         print('there is a column considered')
+    #         self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
+    #         return dx, dy, 1.2
+    #     else:
+    #         self.to_write[0] = 1
+    #         try:
+    #             self.prof_type = prof_list[beams[str(round(yf + dy, 1))]["b"]]
+    #         except KeyError:
+    #             self.to_write[0] = 0
+    #             print('there is a column considered --> we have no beam above')
+    #             self.prof_type = prof_list[beams[str(round(yf + dy, 1))][str(round(xf + dx, 1))]]
+    #             return dx, dy, 1.2
+    #         print('there is a beam considered')
+    #         return 0, dy, dz
 
     # the newest function -- updated to 3D structure geometry from the myk branch (JSON syntax)
     def fire_place2(self, xf, yf, elements, element='b', zf=0):
@@ -472,9 +472,7 @@ class Main:
     # changing coordinates to column
     def b2c(self):
         c = CreateOZN(*self.paths, self.f_type)
-        xr, yr, zr = c.fire_place2(
-            *self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
-
+        xr, yr, zr = c.fire_place2(*self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
         self.to_write[0] = 1
         chdir(self.paths[1])
         with open('{}.ozn'.format(self.paths[-1])) as file:
@@ -501,7 +499,7 @@ class Main:
     # removing false results caused by OZone's "Loaded file" error
     def remove_false(self):
         if self.results[-2][4:8] == self.results[-1][4:8]:
-            [self.results.pop(-1) for i in range(2)]
+            self.results.pop(-1)
             self.falses += 1
             print('OZone error occured -- false results removed')
             print('Till now {} errors like that have occured'.format(self.falses))
@@ -529,18 +527,26 @@ class Main:
                 # change relative fire coordinates for the nearest column and run sim again
                 self.sim_no = '{}a'.format(self.sim_no)
                 print('\nSimulation #{}'.format(self.sim_no))
-                self.b2c()
-                self.single_sim(self.to_write)
+                try:
+                    self.b2c()
+                    self.single_sim(self.to_write)
+                
 
-                # choosing worse scenario as single iteration output and checking its correctness
-                print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
-                self.worse()
+                    # choosing worse scenario as single iteration output and checking its correctness
+                    print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
+                    self.worse()
+                except:
+                    print('There is no column avilable')
+                    pass
 
                 try:
-                    if self.remove_false() and len(self.sim_no) > 10:
+                    rep = self.remove_false()
+                    if rep and self.sim_no.count('a') > 3:
                         print('Too many errors occured. Restarting OZone 3!')
                         RunSim(*self.paths).close_ozn()
                         RunSim(*self.paths).open_ozone()
+                        continue
+                    elif rep:
                         continue
                 except IndexError:
                     break

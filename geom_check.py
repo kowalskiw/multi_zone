@@ -5,9 +5,10 @@ from math import ceil as cl
 from pandas import read_csv as rcsv
 from matplotlib.collections import PatchCollection
 import numpy as np
+from sys import argv
 
-name = 'dcth_ant'
-with open('{}.json'.format(name)) as file:
+name = argv[1]
+with open(name) as file:
     xel = json.load(file)
 geom = xel['geom']
 ratio1 = cl(len(geom['beams']) ** 0.5)
@@ -43,7 +44,7 @@ plt.savefig('geom.png')
 
 fig, ax = plt.subplots()
 
-with open('{}.ful'.format(name)) as file:
+with open('{}.ful'.format(name.split('.')[0])) as file:
     ful = rcsv(file)
 patches = []
 for i, r in ful.iterrows():
