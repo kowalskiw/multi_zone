@@ -839,7 +839,7 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for i in range(0, self.t_end + 1, 60):
+        for i in range(0, int(self.t_end/120)):
             hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
             if hrr[-1] > hrr_max:
                 hrr[-1] = hrr_max
@@ -863,7 +863,7 @@ class Fires:
 
         print('alpha:{}, radius: {}'.format(alpha, (area / 3.1415) ** 0.5))
         hrr = []
-        for i in range(0, self.t_end + 1, 60):
+        for i in range(0, int(self.t_end/120)):
             hrr.extend([i / 60, round(H * alpha * (i ** 3) / 1000, 4)])
             if hrr[-1] > hrr_max:
                 hrr[-1] = hrr_max
@@ -891,8 +891,9 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for i in range(0, self.t_end + 1, 60):
-            hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
+        for t_frag in range(0,120):
+            t = self.t_end * t_frag/120
+            hrr.extend([t/60, round(alpha / 1000 * (t ** 2), 4)])
             if hrr[-1] > config.hrr_max:
                 hrr[-1] = config.hrr_max
 
@@ -921,7 +922,7 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t in range(0, self.t_end + 1, 60):
+        for t in range(0, int(self.t_end/120)):
 
             if t >= config.t_sprink:
                 hrr.extend([t / 60, round(alpha / 1000 * (config.t_sprink ** 2), 4)])
@@ -952,7 +953,7 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t in range(0, self.t_end + 1, 60):
+        for t in range(0, int(self.t_end/120)):
 
             if t >= config.t_sprink:
                 q = q_0 * exp(-0.0024339414 * (t - config.t_sprink)) / 1000
