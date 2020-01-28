@@ -893,7 +893,7 @@ class Fires:
         hrr = []
         for t_frag in range(0,120):
             t = self.t_end * t_frag/120
-            hrr.extend([t/60, round(alpha / 1000 * (t ** 2), 4)])
+            hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
             if hrr[-1] > config.hrr_max:
                 hrr[-1] = config.hrr_max
 
@@ -922,12 +922,13 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t in range(0, int(self.t_end/120)):
+        for t_frag in range(0,120):
+            t = self.t_end * t_frag/120
 
             if t >= config.t_sprink:
-                hrr.extend([t / 60, round(alpha / 1000 * (config.t_sprink ** 2), 4)])
+                hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (config.t_sprink ** 2)]])
             else:
-                hrr.extend([t / 60, round(alpha / 1000 * (t ** 2), 4)])
+                hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
 
         return hrr, area, fuel_zes, fuel_xes, fuel_yes
 
@@ -953,18 +954,18 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t in range(0, int(self.t_end/120)):
-
+        for t_frag in range(0,120):
+            t = self.t_end * t_frag/120
             if t >= config.t_sprink:
                 q = q_0 * exp(-0.0024339414 * (t - config.t_sprink)) / 1000
                 # print(q_0)
                 # print(t, config.t_sprink, q)
                 if q >= q_0 * 0.00015:
-                    hrr.extend([t / 60, round(q, 4)])
+                    hrr.extend([round(i, 4) for i in [t / 60, q]])
                 else:
-                    hrr.extend([t / 60, round(q_0 * 0.00015, 4)])
+                    hrr.extend([round(i, 4) for i in [t / 60, q_0 * 0.00015]])
             else:
-                hrr.extend([t / 60, round(alpha / 1000 * (t ** 2), 4)])
+                hrr.extend([round(i, 4) for i in [t / 60, alpha / 1000 * (t ** 2)]])
 
         return hrr, area, fuel_zes, fuel_xes, fuel_yes
 
