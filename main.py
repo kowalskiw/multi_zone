@@ -2,13 +2,11 @@ from os import listdir, getcwd, chdir, popen, mkdir, path
 import json as js
 from pynput.keyboard import Key, Controller
 import time
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pandas import read_csv as rcsv
 from sys import argv
-from numpy import sqrt, random, log, pi
-import sqlite3 as sql
-from math import exp
+from numpy import sqrt, log, random, pi
+from export import Export
+from fires import Fires
+
 
 '''functions of CreateOZN class is related to another config file
 CreateOZN class prepares input file (.ozn) for every single simulation'''
@@ -324,17 +322,23 @@ class CreateOZN:
     # choosing profile from catalogue
     def profile(self):
         tab_new = ['Steel\n', 'Unprotected\n', 'Catalogue\n']
+
+        # open OZone's steel profile DB
         with open(self.ozone_path + '\Profiles.sys') as file:
             ozone_prof = file.readlines()
+
+        # convert data from OZone's DB to readable python dict
+        # skip three headers lines at the begining
+        # divide data in {Designation1:[profile1, profile2, (...)], (...)} style
         prof_dict = {}
         keys = []
         values = []
-        for l in ozone_prof[3:]:
-            if l[0] == 'D':
-                keys.append(l.split()[1])
+        for line in ozone_prof[3:]:
+            if line.startswith('Designation'):
+                keys.append(line.split()[1])
                 values = []
-            elif l != '\n':
-                values.append(l.split('  ')[0])
+            elif line != '\n':
+                values.append(line.split('  ')[0])
             else:
                 prof_dict.update({keys[-1]: values})
 
@@ -342,6 +346,7 @@ class CreateOZN:
         for t, p in prof_dict.items():
             try:
                 [tab_new.append('{}\n'.format(i)) for i in [list(prof_dict.keys()).index(t), p.index(self.prof_type)]]
+                break
             except ValueError:
                 pass
 
@@ -530,7 +535,6 @@ class Main:
                 try:
                     self.b2c()
                     self.single_sim(self.to_write)
-                
 
                     # choosing worse scenario as single iteration output and checking its correctness
                     print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
@@ -558,416 +562,13 @@ class Main:
                 e = Export(self.results, self.paths[1])
                 e.csv_write('stoch_rest')
                 # check if RMSE is low enough to stop simulation
-                if e.save(rset, self.t_crit, self.falses) and rmse:
+                if e.save(self.rset, self.t_crit, self.falses) and rmse:
                     print('Multisimulation finished due to RMSE condition')
                     break
                 self.results.clear()
 
         # safe closing code:
         RunSim(*self.paths).close_ozn()
-
-
-'''set of charting functions for different purposes'''
-
-
-class Charting:
-    def __init__(self, res_path):
-        chdir(res_path)
-        self.results = rcsv('stoch_rest.csv', sep=',')
-
-    # old chart -- not used at the moment
-    def distribution(self):
-        temp, time, foo = zip(*self.results[1:])
-        time_list = list(time)
-        probs = []
-        times = []
-        no_collapse = 0
-
-        # probability of no collapse scenario
-        if 0 in time_list:
-            no_collapse = time_list.count(0) / len(time_list)
-            while 0 in time_list:
-                time_list.remove(0)
-
-        # distribution of collapse times
-        n_sample = len(time_list)
-        while len(time_list) > 0:
-            i = time_list[0]
-            probs.append(time_list.count(i) / n_sample)
-            times.append(i)
-            while i in time_list:
-                time_list.remove(i)
-
-        print('P(no_collapse) = {}'.format(no_collapse))
-
-        fig, ax = plt.subplots()
-        ax.hist(times, density=True, cumulative=False, histtype='stepfilled')
-
-        plt.savefig('distr_wk')
-
-        return [[no_collapse], times, probs]
-
-    # charts used for risk analysis
-    def ak_distr(self, t_crit, rset, p_coll, p_evac):
-        print(self.results)
-
-        plt.figure(figsize=(12, 4))
-        plt.subplot(121)
-        sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
-                                kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Temperature [°C]')
-        plt.axvline(x=t_crit, color='r')
-        plt.axhline(y=p_coll, color='r')
-        plt.text(t_crit-0.05*max(self.results.t_max), 0.2, 't_crit', rotation=90)
-
-        plt.subplot(122)
-        print(p_coll)
-        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0], hist_kws={'cumulative': True},
-                                kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Time [s]')
-        plt.axvline(x=rset, color='r')
-        plt.axhline(y=p_evac, color='r')
-        plt.text(rset-0.05*max(self.results.time_crit[self.results.time_crit > 0]), 0.2, 'RSET', rotation=90)
-        plt.savefig('dist_p.png')
-
-        plt.figure()
-        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0],  axlabel='Czas [s]')
-        plt.axvline(x=rset, color='r')
-        plt.savefig('dist_d.png')
-
-
-'''exporting results'''
-
-
-# develop or abandon
-
-
-class Export:
-    def __init__(self, results, res_path):
-        chdir(res_path)
-        self.r_p = res_path
-        self.res_tab = results
-
-    def __sql_connect(self):
-        with open('results.db', 'w') as file:
-            file.write('')
-            pass
-        return sql.connect('results.db')
-
-    def sql_write(self):
-        conn = self.__sql_connect()
-
-        conn.execute("CREATE TABLE results_ozone({} real, {} real)".format(*self.res_tab[0]))
-        for i in self.res_tab:
-            conn.execute("INSERT INTO results_ozone VALUES (?, ?)", i)
-
-        conn.commit()
-        # conn.close()
-        print('results has been written to SQLite database')
-
-    def sql_read(self):
-        conn = self.__sql_connect()
-        conn.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
-        # conn.execute("SELECT * FROM results_ozone")
-        print(*conn.cursor().fetchall())
-
-    def csv_write(self, title):
-        writelist = []
-        for i in self.res_tab:
-            for j in range(len(i)):
-                i[j] = str(i[j])
-            writelist.append(','.join(i) + '\n')
-        if '{}.csv'.format(title) not in listdir('.'):
-            writelist.insert(0, ','.join(['t_max', 'time_crit', 'element', 'hrr_max', 'xf', 'yf', 'zf', 'radius',
-                                          'distance\n']))
-        with open('{}.csv'.format(title), 'a') as file:
-            file.writelines(writelist)
-
-        print('results has been written to CSV file')
-
-    def rmse(self, p, n):
-        return (p*(1-p)/n)**2
-
-    def save(self, rset, t_crit, errors):
-        rset = int(rset)
-        t_crit = int(t_crit)
-
-        data = rcsv('stoch_rest.csv', sep=',')
-        num_nocoll = len(data.time_crit[data.time_crit == 0])
-        iter = len(data.t_max)
-        save_list = ["Results from {} iterations\n".format(iter)]
-
-        p_coll = len(data.t_max[data.t_max < int(t_crit)]) / len(data.t_max)
-        save_list.extend(['P(collapse) = {}\n'.format(1 - p_coll), 'RMSE={}\n'.format(self.rmse(p_coll, iter))])
-
-        try:
-            p_evac = (len(data.time_crit[data.time_crit <= int(rset)]) - num_nocoll) / (len(data.time_crit) - num_nocoll)
-            save_list.extend(['P(ASET < RSET) = {}\n'.format(p_evac), 'RMSE={}\n'.format(self.rmse(p_evac, iter))])
-        except ZeroDivisionError:
-            save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
-            p_evac = 0
-
-        save_list.append('{} OZone errors occured'.format(errors))
-
-        with open('results.txt', 'w') as file:
-            file.writelines(save_list)
-
-        # draw charts
-        print('t_crit={}\nRSET={}'.format(t_crit, rset))
-        try:
-            Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
-        except ValueError:
-            print('while drawing a chart error occured')
-            return False
-        # check if rmse is low enough to stop calculations
-        rmses = []
-        [rmses.append(self.rmse(i, iter)) for i in [p_coll, p_evac]]
-        print('RMSE_coll = {}\n RMSE_evac = {}'.format(*rmses))
-        if 0 < rmses[0] < 0.001 and 0 < rmses[1] < 0.001:
-            return True
-        else:
-            return False
-
-
-'''fire randomization class, which is recalled in CreateOZN.fire()'''
-
-
-class Fires:
-    def __init__(self, a_max, t_end):
-        self.a_max = a_max
-        self.t_end = t_end
-
-    def pool_fire(self, title, only_mass=False):
-        with open('{}.ful'.format(title)) as file:
-            fuel_prop = file.readlines()[1].split(',')
-
-        # random mass of fuel
-        try:
-            mass = triangular(int(fuel_prop[5]), int(fuel_prop[6]))
-        except ValueError:
-            mass = int(fuel_prop[5])
-
-        # random area of leakage
-        if only_mass:
-            area_ = mass * 0.03  # 0.019 # glycerol # 0.03 methanol leakage
-            area = triangular(area_ * 0.9 * 100, area_ * 1.1 * 100) / 100
-        else:
-            try:
-                area = triangular(int(fuel_prop[3]), int(fuel_prop[4]))
-            except ValueError:
-                area = int(fuel_prop[3])
-
-        if area < 0.28:
-            ml_rate = triangular(0.015 * .9, 0.015 * 1.1)
-        elif area < 7.07:
-            ml_rate = triangular(0.022 * .9, 0.022 * 1.1)
-        else:
-            ml_rate = triangular(0.029 * .9, 0.029 * 1.1)
-
-        if self.a_max < area:
-            area = self.a_max
-
-        print('mass loss rate = {}'.format(ml_rate))
-        hrr_ = float(fuel_prop[1]) * ml_rate * area  # [MW] - heat release rate
-        hrr = triangular(hrr_ * .8, hrr_ * 1.2)
-
-        time_end = mass / ml_rate / area
-        if time_end > self.t_end:
-            time_end = self.t_end
-            hrr_list = [0, hrr, time_end / 60, hrr]
-        else:
-            if time_end < 60:
-                time_end = 60
-            hrr_list = [0, hrr, time_end / 60, hrr]
-            hrr_list.extend([hrr_list[-2] + 1 / 6, 0, self.t_end / 60, 0])
-
-        print('HRR = {}MW'.format(hrr))
-
-        fuel_h = round(1 / float(fuel_prop[2]) / float(fuel_prop[5]), 2)
-
-        return hrr_list, area, fuel_h
-
-    # develop or abandon
-    def user_def_fire(self):
-        tab_new = []
-        with open('udf_file', 'r') as file:
-            fire = file.readlines()
-
-        tab_new.extend(fire[:10])
-        max_area = int(fire[2][:2])
-        comb_eff = 0.8
-        comb_heat = float(fire[7][:-1])
-        max_hrr = float(fire[-1].split()[1])
-
-        for line in fire[10:]:
-            time = float(line.split()[0])  # it may be an easier way
-            hrr = float(line.split()[1])
-            mass_flux = round(hrr / comb_eff / comb_heat, ndigits=2)
-            area = round(max_area * hrr / max_hrr, ndigits=2)
-
-        return hrr, mass_flux, area
-
-    def test_fire(self):
-        hrr = [0, 0, 15, 40]
-        area = 10
-        height = 0
-
-        return hrr, area, height
-
-    # develop or abandon
-    def annex_fire(self, a_max, parameters):
-        tab_new = ['NFSC\n', '{}\n'.format(a_max)]
-        [tab_new.append('{}\n'.format(i)) for i in parameters]
-        [tab_new.append('{}\n'.format(i)) for i in [17.5, 0.8, 2, 'Office (standard)', 'Medium', 250, 511, 1]]
-        [tab_new.append('\n') for i in range(5)]
-        tab_new.append('{}\n'.format(a_max))
-        print(tab_new)
-
-        return tab_new
-
-    # fire curve accordant to New Zeland standard C/VM2 -- older version
-    # check&remove
-    def newzealand1(self, name):
-        fuel_height = (0.5, 18.5)
-        fuel_xes = (0.5, 9.5)
-        fuel_yes = (0.5, 19.5)
-        hrr_max = 50
-
-        config = rcsv('{}.ful'.format(name), sep=',')
-        print(float(config.alpha_mode))
-        alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
-        hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
-        area = hrr_max / hrrpua
-
-        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
-        hrr = []
-        for i in range(0, int(self.t_end/120)):
-            hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
-            if hrr[-1] > hrr_max:
-                hrr[-1] = hrr_max
-
-        return hrr, area, fuel_height, fuel_xes, fuel_yes
-
-    # fire curve accordant to New Zeland standard C/VM2 -- newer version
-    # check&remove
-    def newzealand2(self, name):
-        fuel_height = (0.32, 34.1)
-        fuel_xes = (0.3, 23.1)
-        fuel_yes = (10.3, 101.7)
-        hrr_max = 50
-
-        H = fuel_height[1] - fuel_height[0]
-        A_max = (fuel_xes[1] - fuel_xes[0]) ** 2 * 3.1415 / 4
-
-        config = rcsv('{}.ful'.format(name), sep=',')
-        alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
-        area = triangular(0, A_max)
-
-        print('alpha:{}, radius: {}'.format(alpha, (area / 3.1415) ** 0.5))
-        hrr = []
-        for i in range(0, int(self.t_end/120)):
-            hrr.extend([i / 60, round(H * alpha * (i ** 3) / 1000, 4)])
-            if hrr[-1] > hrr_max:
-                hrr[-1] = hrr_max
-
-        return hrr, area, fuel_height, fuel_xes, fuel_yes
-
-    # t-squared fire
-    def alfa_t2(self, name, property=None):
-        ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = (random.randint(0, len(ffile.index)))
-        config = ffile.iloc[fire_site]
-
-        fuel_xes = (config.XA, config.XB)
-        fuel_yes = (config.YA, config.YB)
-        fuel_zes = (config.ZA, config.ZB)
-
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
-
-        if not property:
-            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
-        elif property == 'store':
-            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
-
-        area = config.hrr_max / hrrpua
-
-        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
-        hrr = []
-        for t_frag in range(0,120):
-            t = self.t_end * t_frag/120
-            hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
-            if hrr[-1] > config.hrr_max:
-                hrr[-1] = config.hrr_max
-
-        return hrr, area, fuel_zes, fuel_xes, fuel_yes
-
-    # curve taking sprinklers into account
-    def sprink_noeff(self, name, property=None):
-        ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = (random.randint(0, len(ffile.index)))
-        config = ffile.iloc[fire_site]
-
-        fuel_xes = (config.XA, config.XB)
-        fuel_yes = (config.YA, config.YB)
-        fuel_zes = (config.ZA, config.ZB)
-
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
-
-        if not property:
-            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
-        elif property == 'store':
-            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
-
-        q_0 = alpha * config.t_sprink ** 2
-
-        area = q_0 / hrrpua
-
-        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
-        hrr = []
-        for t_frag in range(0,120):
-            t = self.t_end * t_frag/120
-
-            if t >= config.t_sprink:
-                hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (config.t_sprink ** 2)]])
-            else:
-                hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
-
-        return hrr, area, fuel_zes, fuel_xes, fuel_yes
-
-    def sprink_eff(self, name, property=None):
-        ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = (random.randint(0, len(ffile.index)))
-        config = ffile.iloc[fire_site]
-
-        fuel_xes = (config.XA, config.XB)
-        fuel_yes = (config.YA, config.YB)
-        fuel_zes = (config.ZA, config.ZB)
-
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
-
-        if not property:
-            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
-        elif property == 'store':
-            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
-
-        q_0 = alpha * config.t_sprink ** 2
-
-        area = q_0 / hrrpua
-
-        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
-        hrr = []
-        for t_frag in range(0,120):
-            t = self.t_end * t_frag/120
-            if t >= config.t_sprink:
-                q = q_0 * exp(-0.0024339414 * (t - config.t_sprink)) / 1000
-                # print(q_0)
-                # print(t, config.t_sprink, q)
-                if q >= q_0 * 0.00015:
-                    hrr.extend([round(i, 4) for i in [t / 60, q]])
-                else:
-                    hrr.extend([round(i, 4) for i in [t / 60, q_0 * 0.00015]])
-            else:
-                hrr.extend([round(i, 4) for i in [t / 60, alpha / 1000 * (t ** 2)]])
-
-        return hrr, area, fuel_zes, fuel_xes, fuel_yes
 
 
 # calculating critical temperature according to equation from Eurocode 3
@@ -985,60 +586,21 @@ def random_position(xes, yes, zes=(0, 1)):
     return fire
 
 
-# triangular distribution sampler
-def triangular(left, right, mode=False):
-    if not mode:
-        mode = (right - left) / 3 + left
-    return random.triangular(left, mode, right)
-
-
-# validating function
-# develop or abandon
-# def bound_valid(paths):
-#     chdir(paths[1])
-#     for x in [0, 8]:
-#         with open('{}.ozn'.format(paths[3])) as file:
-#             ozn = file.readlines()
-#         ozn[307] = '{}\n'.format(x)
-#
-#         with open('{}.ozn'.format(paths[3]), 'w') as file:
-#             file.writelines(ozn)
-#
-#         for hrr_max in range(300):
-#             alpha = 0.1876
-#             tmax = int((hrr_max / alpha) ** 0.5)
-#             diam = (4 * hrr_max / 1.65 / 3.1415) ** 0.5
-#             hrr_tab = []
-#             print(type(tmax), type(alpha))
-#             [hrr_tab.extend([t, t ^ 2 * alpha]) for t in range(60, tmax, 60)]
-#             hrr_tab.extend(['{}\n{}\n'.format(tmax, (tmax ^ 2) * alpha)])
-#
-#             with open('{}.ozn'.format(paths[3])) as file:
-#                 ozn = file.readlines()
-#             ozn[305] = '{}\n'.format(diam)
-#             hrr_tab.reverse()
-#             [ozn.insert(308, rec) for rec in hrr_tab]
-#
-#             with open('{}.ozn'.format(paths[3]), 'w') as file:
-#                 file.writelines(ozn)
-#             RunSim(*paths).open_ozone()
-#             Main(paths, 300).single_sim([hrr_max, x])
-#             RunSim(*paths).close_ozn()
-
-
 if __name__ == '__main__':
-    chdir(argv[1])
-    with open('{}.user'.format(argv[2])) as file:
+    with open(argv[1]) as file:
         user = []
         [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
         print(user)
-    rset = int(user[6])
 
-    # windows_paths = [{0}'C:\Program Files (x86)\OZone 3', {1}'D:\ozone_results\ '[:-1] + task + series,\
-    #                 {2}cfd_folder+task + 'config', {3}series]
-
-    # OZone program folder, results folder, config folder, simulation name
+    # USER file consists of:
+    # {0} ozone -- OZone program directory,
+    # {1} results -- results directory path,
+    # {2} series_config -- path to directory with configuration files,
+    # {3} task -- simulation name
+    # {4} fire -- fire type according to fires.py
+    # {5} miu -- construction ?usage/effort? coefficient according to Eurocode3
+    # {6} RSET -- Required Safe Evacuation Time according to BS
+    # {7} max_iterations -- number of simulations to run
 
     Main(user[:4], int(user[6]), float(user[5]), user[4]).get_results(int(user[7]), rmse=True)
-    # Export([], windows_paths[1]).save('300', '526', 0)
 
