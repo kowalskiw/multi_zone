@@ -245,8 +245,9 @@ class CreateOZN:
                 if group[1] > zf > group[2]:
                     continue
                 for col in group[3:]:
-                    d_col = nearestc(col, (xf, yf), d_col)
-                    prof = group[0]
+                    #print(group)
+                    prof = elements['profiles'][group[0]]
+                    d_col = nearestc(col, (xf, yf), d_col, prof)
 
             # write down date to output CSV database
             self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)
@@ -313,12 +314,12 @@ class CreateOZN:
 
 
 class RunSim:
-    def __init__(self, ozone_path, results_path, config_path, sim_name):
+    def __init__(self, ozone_path, results_path, config_path, sim_name, hard_rate):
         chdir(config_path)
         self.ozone_path = ozone_path
         self.sim_path = '{}\{}.ozn'.format(results_path, sim_name)
         self.keys = Controller()
-        self.hware_rate = 1  # this ratio sets times of waiting for your machine response while running OZone
+        self.hware_rate = hard_rate  # this ratio sets times of waiting for your machine response while running OZone
 
     def open_ozone(self):
         popen('{}\OZone.exe'.format(self.ozone_path))
@@ -357,6 +358,7 @@ class RunSim:
         with self.keys.pressed(Key.alt):
             self.keys.press('s')
         keys.press(Key.enter)
+        time.sleep(2 * self.hware_rate)
 
         print('analises has been run')
 
@@ -365,7 +367,7 @@ class RunSim:
 
 
 class Main:
-    def __init__(self, paths, rset, miu, fire_type):
+    def __init__(self, paths, rset, miu, fire_type, hware):
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
@@ -375,7 +377,7 @@ class Main:
         self.rset = rset
         self.falses = 0
         self.f_type = fire_type
-        self.rs = RunSim(*paths)
+        self.rs = RunSim(*paths, hware)
 
     # import steel temperature table
     def add_data(self):
@@ -564,6 +566,7 @@ if __name__ == '__main__':
     # {5} miu -- construction ?usage/effort? coefficient according to Eurocode3
     # {6} RSET -- Required Safe Evacuation Time according to BS
     # {7} max_iterations -- number of simulations to run
+    # (8) hardware -- rate of delays (depends on hardware and sim complexity)
 
-    Main(user[:4], int(user[6]), float(user[5]), user[4]).get_results(int(user[7]), rmse=True)
+    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=True)
 
