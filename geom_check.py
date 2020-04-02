@@ -1,10 +1,6 @@
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle as rect
 import json
 from math import ceil as cl
-from pandas import read_csv as rcsv
-from matplotlib.collections import PatchCollection
-import numpy as np
 from sys import argv
 
 
@@ -18,7 +14,6 @@ def xel():
     ratio1 = cl(len(geom['beams']) ** 0.5)
     ratio2 = cl(len(geom['beams'])/ratio1)
     plt.figure(figsize=(ratio1 * 6, ratio2 * 6))
-    #plt.subplots(ratio1, ratio2)
     plt.axes().set_aspect('equal')
 
     plt.grid(True)
@@ -92,6 +87,5 @@ def xel():
 #     plt.grid(True)
 #
 #     plt.show()
-    
 
 xel()
