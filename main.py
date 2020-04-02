@@ -247,7 +247,7 @@ class CreateOZN:
                 if group[1] < zf < group[2]:    # check if column is not below the fire 
                     break
                 for col in group[3:]:
-                    prof = group[0]
+                    prof = elements['profiles'][group[0]]
                     d_col = nearestc(col, (xf, yf), d_col, prof)
 
             # write down date to output CSV database
@@ -359,6 +359,7 @@ class RunSim:
         with self.keys.pressed(Key.alt):
             self.keys.press('s')
         keys.press(Key.enter)
+        time.sleep(2 * self.hware_rate)
 
         print('analises has been run')
 
@@ -579,4 +580,5 @@ if __name__ == '__main__':
     # (8) hardware -- rate of delays (depends on hardware and sim complexity)
 
     Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
+
 
