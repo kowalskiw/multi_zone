@@ -15,8 +15,24 @@ def triangular(left, right, mode=False):
 
 class Fires:
     def __init__(self, a_max, t_end):
-        self.a_max = a_max
-        self.t_end = t_end
+        self.a_max = a_max  # max fire area
+        self.t_end = t_end  # duration of simulation
+
+    def mc_rand(self, csv):
+        ases = []   # list with partial factors A of each fuel area
+        probs = []  # list with probabilities of ignition in each fuel area
+
+        # calculate partial factor A (volume * probability) of each fuel area
+        for i, r in csv.iterrows():
+            a = (r['XB'] - r['XA']) * (r['YB'] - r['YA']) * (r['ZB'] - r['ZA']) * r['MC']
+            ases.append(a)
+
+        # calculate probability of ignition in each fuel area
+        for a in ases:
+            probs.append(a/sum(ases))
+
+        # return sampled fuel area
+        return random.choice(len(probs), p=probs)
 
     def pool_fire(self, title, only_mass=False):
         with open('{}.ful'.format(title)) as file:
@@ -156,7 +172,7 @@ class Fires:
     # t-squared fire
     def alfa_t2(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = (random.randint(0, len(ffile.index)))
+        fire_site = self.mc_rand(ffile)
         config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)
@@ -185,7 +201,7 @@ class Fires:
     # curve taking sprinklers into account
     def sprink_noeff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = (random.randint(0, len(ffile.index)))
+        fire_site = self.mc_rand(ffile)
         config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)
@@ -217,7 +233,7 @@ class Fires:
 
     def sprink_eff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = (random.randint(0, len(ffile.index)))
+        fire_site = self.mc_rand(ffile)
         config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)

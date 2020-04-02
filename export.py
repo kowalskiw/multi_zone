@@ -52,8 +52,9 @@ class Export:
         print('results has been written to CSV file')
 
     def rmse(self, p, n):
-        return (p * (1 - p) / n) ** 2
+        return (p * (1 - p) / n) ** 0.5
 
+    # creating summary file and charts based on stoch_res CSV database
     def save(self, rset, t_crit, errors):
         rset = int(rset)
         t_crit = int(t_crit)
@@ -61,15 +62,33 @@ class Export:
         data = rcsv('stoch_rest.csv', sep=',')
         num_nocoll = len(data.time_crit[data.time_crit == 0])
         iter = len(data.t_max)
+
         save_list = ["Results from {} iterations\n".format(iter)]
+        err = [1, 1]    # actual uncertainty of calculation
 
+        # calculating and writing collapse probability and uncertainty to the list
         p_coll = len(data.t_max[data.t_max < int(t_crit)]) / len(data.t_max)
-        save_list.extend(['P(collapse) = {}\n'.format(1 - p_coll), 'RMSE={}\n'.format(self.rmse(p_coll, iter))])
+        save_list.append('P(collapse) = {}\n'.format(1 - p_coll))
+        if save_list[-1] == 0:
+            err[0] = 3 / iter
+            save_list.append('CI={}\n'.format(3/iter))
+        else:
+            err[0] = self.rmse(p_coll, iter)
+            save_list.append('RMSE={}\n'.format(self.rmse(p_coll, iter)))
 
+        # calculating and writing unsuccessful evacuation probability and uncertainty to the list
         try:
             p_evac = (len(data.time_crit[data.time_crit <= int(rset)]) - num_nocoll) / (
                         len(data.time_crit) - num_nocoll)
-            save_list.extend(['P(ASET < RSET) = {}\n'.format(p_evac), 'RMSE={}\n'.format(self.rmse(p_evac, iter))])
+            save_list.append('P(ASET < RSET) = {}\n'.format(p_evac))
+
+            if save_list[-1] == 0:
+                err[1] = 3 / iter
+                save_list.append('CI={}\n'.format(err[1]))
+            else:
+                err[1] = self.rmse(p_evac, iter)
+                save_list.append('RMSE={}\n'.format(err[1]))
+
         except ZeroDivisionError:
             save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
             p_evac = 0
@@ -80,14 +99,12 @@ class Export:
             file.writelines(save_list)
 
         # draw charts
-        print('t_crit={}\nRSET={}'.format(t_crit, rset))
+        print('temp_crit={}\nRSET={}'.format(t_crit, rset))
         Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
 
-        # check if rmse is low enough to stop calculations
-        rmses = []
-        [rmses.append(self.rmse(i, iter)) for i in [p_coll, p_evac]]
-        print('RMSE_coll = {}\n RMSE_evac = {}'.format(*rmses))
-        if 0 < rmses[0] < 0.001 and 0 < rmses[1] < 0.001:
+        # check if uncertainty is low enough to stop calculations
+        print('RMSE_coll = {}\n RMSE_evac = {}'.format(*err))
+        if 0 < err[0] < 0.001 and 0 < err[1] < 0.001:
             return True
         else:
             return False

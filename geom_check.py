@@ -7,19 +7,23 @@ from matplotlib.collections import PatchCollection
 import numpy as np
 from sys import argv
 
+
 def xel():
     name = argv[1]
     with open(name) as file:
         xel = json.load(file)
     geom = xel['geom']
+    
+    # setting picture ratio
     ratio1 = cl(len(geom['beams']) ** 0.5)
     ratio2 = cl(len(geom['beams'])/ratio1)
     plt.figure(figsize=(ratio1 * 6, ratio2 * 6))
-    # plt.subplots(ratio1, ratio2)
+    #plt.subplots(ratio1, ratio2)
     plt.axes().set_aspect('equal')
 
     plt.grid(True)
-
+    
+    # iterating through beams
     i = 1
     levels = geom['beams']
     for lvl in levels:
@@ -28,6 +32,8 @@ def xel():
         legend = []
         
         plt.title('Level +{}'.format(lvl))
+        
+        # iterating through X and Y beams and plotting them as lines of diffrent colors
         for xbeam in levels[lvl]['X']:
             prof = int(xbeam[0])
             if prof in legend:
@@ -44,37 +50,48 @@ def xel():
                 plt.plot(tuple(ybeam[2:4]), (ybeam[1], ybeam[1]), c='C{}'.format(prof), label=xel['profiles'][prof])
         i += 1
         
+        # iterating through columns 
         legend = []
+        if not'cols' in geom.keys():
+            continue
+
         for group in geom['cols']:
-            prof = geom['cols'][group][0]
-            print('{}'.format(float(geom['cols'][group][0]/5)))
+            if group[1] >= float(lvl) > group[2]:   # check if column is incorporated in level
+                    break
+                    
+            prof = group[0]
             
-            for col in geom['cols'][group][1:]:
+            for col in group[3:]:
                 if prof in legend:
                     plt.plot(*col, 's', c='C{}'.format(prof))
                 else:
                     legend.append(prof)            
                     plt.plot(*col, 's', c='C{}'.format(prof), label=xel['profiles'][prof])
         plt.grid(True)
+    
+    # drawing and saving
     plt.legend(bbox_to_anchor=(1.1,1.1))
     plt.savefig('{}.png'.format(name.split('.')[0]))
     plt.show()
 
     fig, ax = plt.subplots()
 
-def ful():
-    with open('{}.ful'.format(name.split('.')[0])) as file:
-        ful = rcsv(file)
-    patches = []
-    for i, r in ful.iterrows():
-        patches.append(rect((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
-    collection = PatchCollection(patches, alpha=0.8)
-    ax.add_collection(collection)
 
-    plt.axis('equal')
-    plt.tight_layout()
-    plt.grid(True)
-
-    plt.show()
+# def ful():
+#     name = argv[1]
+#     with open('{}.ful'.format(name.split('.')[0])) as file:
+#         ful = rcsv(file)
+#     patches = []
+#     for i, r in ful.iterrows():
+#         patches.append(rect((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
+#     collection = PatchCollection(patches, alpha=0.8)
+#     ax.add_collection(collection)
+#
+#     plt.axis('equal')
+#     plt.tight_layout()
+#     plt.grid(True)
+#
+#     plt.show()
+    
 
 xel()

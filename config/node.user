@@ -1,0 +1,9 @@
+ozone -- C:\Program Files (x86)\OZone 3
+results -- D:\ozone_results\test
+series_config -- D:\multi_zone\config
+task -- example
+fire -- alfat2_store
+miu -- 0.7
+RSET -- 300
+max_iterations -- 10
+hardware -- 1.2

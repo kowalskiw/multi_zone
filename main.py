@@ -155,7 +155,7 @@ class CreateOZN:
             hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
-        self.to_write.append(max(hrr[0::2]))
+        self.to_write.append(max(hrr[1::2]))
 
         comp_h = self.geom()[2]  # import compartment height from GEOM config file
         diam = round(2 * sqrt(area / pi), 2)
@@ -224,6 +224,8 @@ class CreateOZN:
                 d_beam = (*nearest_y[0], float(above_lvl) - zf)
                 self.to_write.append(nearest_y[1])
 
+            self.to_write[0] = 'b'
+
             return d_beam
 
         # columns mapping
@@ -242,11 +244,11 @@ class CreateOZN:
             prof = "HE HE"
             # iterate through all columns in all profile groups
             for group in elements['geom']['cols']:
-                if group[1] > zf > group[2]:
-                    continue
+                if group[1] < zf < group[2]:    # check if column is not below the fire 
+                    break
                 for col in group[3:]:
-                    d_col = nearestc(col, (xf, yf), d_col)
                     prof = group[0]
+                    d_col = nearestc(col, (xf, yf), d_col, prof)
 
             # write down date to output CSV database
             self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)
@@ -313,12 +315,12 @@ class CreateOZN:
 
 
 class RunSim:
-    def __init__(self, ozone_path, results_path, config_path, sim_name):
+    def __init__(self, ozone_path, results_path, config_path, sim_name, hard_rate):
         chdir(config_path)
         self.ozone_path = ozone_path
         self.sim_path = '{}\{}.ozn'.format(results_path, sim_name)
         self.keys = Controller()
-        self.hware_rate = 1  # this ratio sets times of waiting for your machine response while running OZone
+        self.hware_rate = hard_rate  # this ratio sets times of waiting for your machine response while running OZone
 
     def open_ozone(self):
         popen('{}\OZone.exe'.format(self.ozone_path))
@@ -365,7 +367,7 @@ class RunSim:
 
 
 class Main:
-    def __init__(self, paths, rset, miu, fire_type):
+    def __init__(self, paths, rset, miu, fire_type, hware):
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
@@ -375,7 +377,7 @@ class Main:
         self.rset = rset
         self.falses = 0
         self.f_type = fire_type
-        self.rs = RunSim(*paths)
+        self.rs = RunSim(*paths, hware)
 
     # import steel temperature table
     def add_data(self):
@@ -464,6 +466,7 @@ class Main:
     def remove_false(self):
         if self.results[-2][4:8] == self.results[-1][4:8]:
             self.results.pop(-1)
+            self.results.pop(-2)
             self.falses += 1
             print('OZone error occured -- false results removed')
             print('Till now {} errors like that have occured'.format(self.falses))
@@ -480,21 +483,23 @@ class Main:
         # this is main loop for stochastic analyses
         # n_iter is maximum number of iterations
         for sim in range(int(n_iter)):
-            sim_no = sim + self.sim_time  # unique simulation name based on time mask
+            sim_no = sim + self.sim_time  # unique simulation ID based on time mask
             while True:
-                print('\n\nSimulation #{}'.format(sim_no))
+                print('\n\nSimulation #{} -- {}/{}'.format(sim_no, sim, n_iter))
                 # try:
+                # creating OZN file and writing essentials to the list
                 self.to_write.clear()
                 self.to_write = CreateOZN(*self.paths, self.f_type).write_ozn()
+                self.to_write.insert(0, sim_no)
 
                 self.single_sim(self.to_write)
-                self.details(sim_no)
+                self.details(sim_no)    # moving Ozone files named by simulation ID
 
                 # change relative fire coordinates for the nearest column and run sim again
                 sim_no = '{}a'.format(sim_no)
-                print('\nSimulation #{}'.format(sim_no))
+                print('\nSimulation #{} -- {}/{}'.format(sim_no, sim, n_iter))
                 try:
-                    self.b2c()
+                    self.b2c()  # beam coordinates to column coords
                     self.single_sim(self.to_write)
 
                     # choosing worse scenario as single iteration output and checking its correctness
@@ -516,8 +521,10 @@ class Main:
                     elif rep:
                         continue
                 except IndexError:
+                    print("Step finished with error")
                     break
                 else:
+                    print("Step finished OK")
                     break
 
             # exporting results every (self.save_samp) repetitions
@@ -532,6 +539,8 @@ class Main:
 
         # safe closing code:
         self.rs.close_ozn()
+
+        print("Multisimulation finished OK")
 
 
 # calculating critical temperature according to equation from Eurocode 3
@@ -550,10 +559,13 @@ def random_position(xes, yes, zes=(0, 1)):
 
 
 if __name__ == '__main__':
-    with open(argv[1]) as file:
-        user = []
-        [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
-        print(user)
+    try:
+        with open(argv[1]) as file:
+            user = []
+            [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
+            print(user)
+    except IndexError:
+        print("Use USER file as an argument.")
 
     # USER file consists of:
     # {0} ozone -- OZone program directory,
@@ -564,6 +576,7 @@ if __name__ == '__main__':
     # {5} miu -- construction ?usage/effort? coefficient according to Eurocode3
     # {6} RSET -- Required Safe Evacuation Time according to BS
     # {7} max_iterations -- number of simulations to run
+    # (8) hardware -- rate of delays (depends on hardware and sim complexity)
 
-    Main(user[:4], int(user[6]), float(user[5]), user[4]).get_results(int(user[7]), rmse=True)
+    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
 
