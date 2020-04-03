@@ -190,8 +190,8 @@ class Fires:
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t_frag in range(0,120):
-            t = self.t_end * t_frag/120
+        for t_frag in range(0, 120):
+            t = self.t_end * t_frag/119
             hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
             if hrr[-1] > config.hrr_max:
                 hrr[-1] = config.hrr_max

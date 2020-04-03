@@ -24,7 +24,7 @@ class CreateOZN:
             check = '\ '[:-1].join(p_list[:p])
             if not path.exists(check):
                 mkdir(check)
-        self.to_write = ['c']  # 0 - column, 1 - beam
+        self.to_write = ['none']  # 0 - column, 1 - beam
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
         self.f_type = fire_type
@@ -231,29 +231,31 @@ class CreateOZN:
         # columns mapping
         elif element == 'c':
             # finding nearest column
-            def nearestc(col_pos, fire_pos, d_prev, profile):
+            def nearestc(col_pos, fire_pos, d_prev):
                 distx = fire_pos[0] - col_pos[0]
                 disty = fire_pos[1] - col_pos[1]
                 # compare distance of certain column with the nearest so far
                 if (distx ** 2 + disty ** 2) ** 0.5 < (d_prev[0] ** 2 + d_prev[1] ** 2) ** 0.5:
                     d_prev = (distx, disty)
-                    self.prof_type = profile
+
+                    self.prof_type = prof
                 return d_prev
 
             d_col = (999, 0)
             prof = "HE HE"
             # iterate through all columns in all profile groups
             for group in elements['geom']['cols']:
-                if group[1] < zf < group[2]:    # check if column is not below the fire 
+                if group[1] > zf > group[2]:    # check if column is not below the fire
                     break
                 for col in group[3:]:
                     prof = elements['profiles'][group[0]]
-                    d_col = nearestc(col, (xf, yf), d_col, prof)
+                    d_col = nearestc(col, (xf, yf), d_col)
 
             # write down date to output CSV database
             self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)
             self.to_write[0] = 'c'
-            self.prof_type = prof
+            print(self.prof_type)
+
 
             return (*d_col, 1.2)
 
@@ -306,7 +308,8 @@ class CreateOZN:
 
         # checksum
         if len(tab_new) != 18:
-            print('There is an error with profile! - check CreateOZN().profile() function an XEL config file')
+            print('There is an error with {} profile! - check CreateOZN().profile() function and XEL config file'.
+                  format(self.prof_type))
 
         return tab_new
 
@@ -426,19 +429,19 @@ class Main:
         return 0    # if t_crit hasn't been exceeded leave '0' as time_crit
 
     # single simulation handling
-    def single_sim(self, export_list):
+    def single_sim(self, export_list, sim_id):
         self.rs.run_simulation()
         time.sleep(1)
 
         # writing results to results output CSV database
-        self.results.append([self.choose_max(), self.choose_crit(), *export_list])
+        self.results.append([sim_id, self.choose_max(), self.choose_crit(), *export_list])
 
     # changing relative coordinates from beam to column
     def b2c(self):
         # checking most exposed column coordinates
         c = CreateOZN(*self.paths, self.f_type)
+        print(self.to_write)
         xr, yr, zr = c.fire_place(*self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
-        self.to_write[0] = 'c'
         chdir(self.paths[1])
 
         # overwriting coordinates in OZN file
@@ -455,9 +458,9 @@ class Main:
 
     # choosing worse scenario
     def worse(self):
-        if self.results[-1][0] > self.results[-2][0]:
+        if self.results[-1][1] > self.results[-2][1]:
             self.results.pop(-2)
-        elif self.results[-1][0] == self.results[-2][0]:
+        elif self.results[-1][1] == self.results[-2][1]:
             if self.results[-1][1] < self.results[-2][1]:
                 self.results.pop(-2)
         else:
@@ -491,20 +494,19 @@ class Main:
                 # creating OZN file and writing essentials to the list
                 self.to_write.clear()
                 self.to_write = CreateOZN(*self.paths, self.f_type).write_ozn()
-                self.to_write.insert(0, sim_no)
 
-                self.single_sim(self.to_write)
+                self.single_sim(self.to_write, sim_no)
                 self.details(sim_no)    # moving Ozone files named by simulation ID
 
                 # change relative fire coordinates for the nearest column and run sim again
                 sim_no = '{}a'.format(sim_no)
-                print('\nSimulation #{} -- {}/{}'.format(sim_no, sim, n_iter))
+                print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
                 try:
                     self.b2c()  # beam coordinates to column coords
-                    self.single_sim(self.to_write)
+                    self.single_sim(self.to_write, sim_no.split('a')[0])
 
                     # choosing worse scenario as single iteration output and checking its correctness
-                    print('beam: {}, col: {}'.format(self.results[-2][0], self.results[-1][0]))
+                    print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
                     self.worse()
                 except:
                     print('There is no column avilable')
@@ -512,19 +514,18 @@ class Main:
 
                 # check for error in results table, removing them and restarting OZone if necessary
                 try:
-                    rep = self.remove_false()
-                    if rep and sim_no.count('a') > 3:
-                        print('Too many errors occured. Restarting OZone 3!')
-                        self.rs.close_ozn()
-                        time.sleep(1)
-                        self.rs.open_ozone()
+                    if self.remove_false():
+                        if sim_no.count('a') > 3:
+                            print('Too many errors occured. Restarting OZone 3!')
+                            self.rs.close_ozn()
+                            time.sleep(1)
+                            self.rs.open_ozone()
+                        print("Step finished with an error, restarting iteration.")
                         continue
-                    elif rep:
-                        continue
+                    else:
+                        print("Step finished OK")
+                        break
                 except IndexError:
-                    print("Step finished with error")
-                    break
-                else:
                     print("Step finished OK")
                     break
 
