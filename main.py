@@ -440,7 +440,6 @@ class Main:
     def b2c(self):
         # checking most exposed column coordinates
         c = CreateOZN(*self.paths, self.f_type)
-        print(self.to_write)
         xr, yr, zr = c.fire_place(*self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
         chdir(self.paths[1])
 
@@ -489,7 +488,7 @@ class Main:
         for sim in range(int(n_iter)):
             sim_no = sim + self.sim_time  # unique simulation ID based on time mask
             while True:
-                print('\n\nSimulation #{} -- {}/{}'.format(sim_no, sim, n_iter))
+                print('\n\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
                 # try:
                 # creating OZN file and writing essentials to the list
                 self.to_write.clear()
@@ -499,7 +498,7 @@ class Main:
                 self.details(sim_no)    # moving Ozone files named by simulation ID
 
                 # change relative fire coordinates for the nearest column and run sim again
-                sim_no = '{}a'.format(sim_no)
+                sim_no = '{}col'.format(sim_no)
                 print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
                 try:
                     self.b2c()  # beam coordinates to column coords
@@ -521,6 +520,7 @@ class Main:
                             time.sleep(1)
                             self.rs.open_ozone()
                         print("Step finished with an error, restarting iteration.")
+                        sim_no = sim_no.split('col')[0] + 'a'
                         continue
                     else:
                         print("Step finished OK")

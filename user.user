@@ -1,8 +1,0 @@
-ozone -- C:\Program Files (x86)\OZone 3
-results -- D:\ozone_results\foo
-series_config -- D:\CR_qsync\ED_\01_multisymulacje\2019\02_Smyk_Lodz\02_ozone\fast\sd05\config
-task -- smyk_05
-fire -- alfat2
-miu -- 0.7
-RSET -- 300
-max_iterations -- 10

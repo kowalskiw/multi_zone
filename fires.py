@@ -136,7 +136,7 @@ class Fires:
         hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
         area = hrr_max / hrrpua
 
-        print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
+        print('alpha:{}, hrrpua:{}'.format(round(alpha, 4), round(hrrpua,4)))
         hrr = []
         for i in range(0, int(self.t_end/120)):
             hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
