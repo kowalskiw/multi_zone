@@ -471,9 +471,9 @@ class Main:
 
     # removing false results caused by OZone's "Loaded file" error
     def remove_false(self):
-        if self.results[-2][4:8] == self.results[-1][4:8]:
-            self.results.pop(-1)
+        if self.results[-2][1:3] == self.results[-1][1:3]:
             self.results.pop(-2)
+            self.results.pop(-1)
             self.falses += 1
             print('OZone error occured -- false results removed')
             print('Till now {} errors like that have occured'.format(self.falses))
