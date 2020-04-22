@@ -186,14 +186,18 @@ class CreateOZN:
     def fire_place(self, xf, yf, elements, element='b', zf=0):
         # beams mapping
         if element == 'b':
-            above_lvl = 0
+            lvls = []
+            above_lvl = -1
             # check if fire is below beams level
-            for lvl in elements['geom']['beams']:
-                if float(lvl) > zf:
-                    above_lvl = lvl
-                    break
-            if above_lvl == 0:
-                above_lvl = max(elements['geom']['beams'])
+            [lvls.append(float(lvl)) for lvl in elements['geom']['beams']]
+            try:
+                lvls.sort()
+                print(lvls)
+                above_lvl = str(lvls[[(lambda l, z : float(l) > z)(i, zf) for i in lvls].index(True)])
+                print(zf, above_lvl)
+            except IndexError:
+                print('There is no beam to be analised')
+            check = (lambda lvl, zf : lvl > zf)      
             print('Analised beam level: {}'.format(above_lvl))
 
             # finding nearest beam; iterating through all beams at certain level and direction
@@ -566,8 +570,9 @@ if __name__ == '__main__':
             user = []
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
             print(user)
+            Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
     except IndexError:
-        print("Use USER file as an argument.")
+        print("Use proper USER file as an argument.")
 
     # USER file consists of:
     # {0} ozone -- OZone program directory,
@@ -580,6 +585,6 @@ if __name__ == '__main__':
     # {7} max_iterations -- number of simulations to run
     # (8) hardware -- rate of delays (depends on hardware and sim complexity)
 
-    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
+
 
 
