@@ -1,12 +1,14 @@
 import matplotlib.pyplot as plt
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
 import json
 from math import ceil as cl
 from sys import argv
+from pandas import read_csv as rcsv
 
 
-def xel():
-    name = argv[1]
-    with open(name) as file:
+def xel(name):
+    with open('{}.xel'.format(name)) as file:
         xel = json.load(file)
     geom = xel['geom']
     
@@ -66,26 +68,35 @@ def xel():
     
     # drawing and saving
     plt.legend(bbox_to_anchor=(1.1,1.1))
-    plt.savefig('{}.png'.format(name.split('.')[0]))
+    #plt.savefig('{}.png'.format(name))
     plt.show()
 
     fig, ax = plt.subplots()
 
 
-# def ful():
-#     name = argv[1]
-#     with open('{}.ful'.format(name.split('.')[0])) as file:
-#         ful = rcsv(file)
-#     patches = []
-#     for i, r in ful.iterrows():
-#         patches.append(rect((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
-#     collection = PatchCollection(patches, alpha=0.8)
-#     ax.add_collection(collection)
-#
-#     plt.axis('equal')
-#     plt.tight_layout()
-#     plt.grid(True)
-#
-#     plt.show()
+def ful(name):
+    
+    fig, ax = plt.subplots(1)
 
-xel()
+    with open('{}.ful'.format(name)) as file:
+        ful = rcsv(file)
+    patches = []
+    for i, r in ful.iterrows():
+        patches.append(Rectangle((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
+    pc = PatchCollection(patches, alpha=0.8)
+    ax.add_collection(pc)
+    plt.axis('equal')
+    plt.tight_layout()
+    plt.grid(True)
+    plt.show()
+
+if __name__ == '__main__':
+    t, ext = argv[1].split('.')
+    print(t + ' + ' + ext) 
+    if ext == 'xel':
+        xel(t)
+    elif ext == 'ful':
+        ful(t)
+    else:
+        '{} is not supported  file type!'.format(ext)
+
