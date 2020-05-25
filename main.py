@@ -145,13 +145,13 @@ class CreateOZN:
             hrr, area, fuel_z, fuel_x, fuel_y = f.alfa_t2(self.title)
         elif self.f_type == 'alfat2_store':
             hrr, area, fuel_z, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
-        elif self.f_type == 'sprink_eff':
+        elif self.f_type == 'sprink-eff':
             hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_eff(self.title)
-        elif self.f_type == 'sprink_eff_store':
+        elif self.f_type == 'sprink-eff_store':
             hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_eff(self.title, property='store')
-        elif self.f_type == 'sprink_noeff':
+        elif self.f_type == 'sprink-noeff':
             hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_noeff(self.title)
-        elif self.f_type == 'sprink_noeff_store':
+        elif self.f_type == 'sprink-noeff_store':
             hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
@@ -192,9 +192,7 @@ class CreateOZN:
             [lvls.append(float(lvl)) for lvl in elements['geom']['beams']]
             try:
                 lvls.sort()
-                print(lvls)
                 above_lvl = str(lvls[[(lambda l, z : float(l) > z)(i, zf) for i in lvls].index(True)])
-                print(zf, above_lvl)
             except IndexError:
                 print('There is no beam to be analised')
             check = (lambda lvl, zf : lvl > zf)      
@@ -569,8 +567,8 @@ if __name__ == '__main__':
         with open(argv[1]) as file:
             user = []
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
-            print(user)
-            Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
+            error = "rmse" in user[9]
+            Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=error)
     except IndexError:
         print("Use proper USER file as an argument.")
 
@@ -584,6 +582,7 @@ if __name__ == '__main__':
     # {6} RSET -- Required Safe Evacuation Time according to BS
     # {7} max_iterations -- number of simulations to run
     # (8) hardware -- rate of delays (depends on hardware and sim complexity)
+    # (9) stop -- when to stop calculation (rmse/number of iterarions)
 
 
 
