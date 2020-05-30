@@ -24,10 +24,11 @@ class CreateOZN:
             check = '\ '[:-1].join(p_list[:p])
             if not path.exists(check):
                 mkdir(check)
-        self.to_write = ['none']  # 0 - column, 1 - beam
+        self.to_write = []
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
         self.f_type = fire_type
+        self.no_beam = False
 
     def write_ozn(self):
         # merge output from each config function in OZN file
@@ -43,13 +44,14 @@ class CreateOZN:
             ozn_file.writelines(['Revision\n', ' 304\n', 'Name\n', self.title + '\n'])
             ozn_file.writelines(tab_new)
             print('OZone simulation file (.ozn) has been written!')
-        return self.to_write
+        return self.to_write, self.no_beam
 
     # enclosure geometry section
-    def geom(self):
+    def geom(self, shell=0):
         with open(self.title + '.geom', 'r') as file:
             geom_tab = file.readlines()
-
+        if shell:
+            geom_tab[2] = '{}/n'.format(shell)
         [self.floor.append(float(i[:-1])) for i in geom_tab[3:5]]
 
         return geom_tab[:6]
@@ -155,7 +157,7 @@ class CreateOZN:
             hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
-        self.to_write.append(max(hrr[1::2]))
+        self.to_write.append(max(hrr[1::2]))    # write maximum HRR to CSV
 
         comp_h = self.geom()[2]  # import compartment height from GEOM config file
         diam = round(2 * sqrt(area / pi), 2)
@@ -169,7 +171,7 @@ class CreateOZN:
             tab_new.append('{}\n'.format(i))
 
         xf, yf, zf = random_position(fuel_x, fuel_y, zes=fuel_z)  # fire position sampling
-        self.to_write.extend([xf, yf, zf, diam / 2])  # add data to output CSV database
+        self.to_write.extend([xf, yf, zf, diam / 2])  # write fire geometry to CSV
         tab_new.insert(0, '{}\n'.format(fuel_z[1] - zf))  # height of fuel above the fire base
 
         # overwriting absolute coordinates with relative ones (fire-element)
@@ -187,13 +189,29 @@ class CreateOZN:
         # beams mapping
         if element == 'b':
             above_lvl = 0
-            # check if fire is below beams level
+            shell = -1
+
+            # check if there is a shell above the fire
+            try:
+                for sh in sorted(elements['geom']['shell']):
+                    if float(sh) >= zf:
+                        shell = float(sh)
+                        self.geom(shell)
+                        break
+            except ValueError:
+                'There is no shell'
+
+            # check if beams lie between fire and shell level
             for lvl in elements['geom']['beams']:
                 if float(lvl) > zf:
                     above_lvl = lvl
                     break
             if above_lvl == 0:
                 above_lvl = max(elements['geom']['beams'])
+            if float(above_lvl) >= shell:
+                print('There is no beam available')
+                self.no_beam = True
+
             print('Analised beam level: {}'.format(above_lvl))
 
             # finding nearest beam; iterating through all beams at certain level and direction
@@ -219,12 +237,10 @@ class CreateOZN:
             # check weather X or Y beam is closer to the fire and writing relative coordinates of closer one
             if nearest_x[1] < nearest_y[1]:
                 d_beam = (*nearest_x[0], float(above_lvl) - zf)
-                self.to_write.append(nearest_x[1])
+                self.to_write.append(nearest_x[1])  # write fire--element distance to CSV
             else:
                 d_beam = (*nearest_y[0], float(above_lvl) - zf)
-                self.to_write.append(nearest_y[1])
-
-            self.to_write[0] = 'b'
+                self.to_write.append(nearest_y[1])  # write fire--element distance to CSV
 
             return d_beam
 
@@ -251,11 +267,8 @@ class CreateOZN:
                     prof = elements['profiles'][group[0]]
                     d_col = nearestc(col, (xf, yf), d_col)
 
-            # write down date to output CSV database
-            self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)
-            self.to_write[0] = 'c'
+            self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)    # write fire--element distance to CSV
             print(self.prof_type)
-
 
             return (*d_col, 1.2)
 
@@ -489,24 +502,29 @@ class Main:
             sim_no = sim + self.sim_time  # unique simulation ID based on time mask
             while True:
                 print('\n\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
-                # try:
+
                 # creating OZN file and writing essentials to the list
                 self.to_write.clear()
-                self.to_write = CreateOZN(*self.paths, self.f_type).write_ozn()
 
-                self.single_sim(self.to_write, sim_no)
-                self.details(sim_no)    # moving Ozone files named by simulation ID
+                # redirect data to CSV and create OZN file for beam
+                self.to_write, no_beam = CreateOZN(*self.paths, self.f_type).write_ozn()
 
-                # change relative fire coordinates for the nearest column and run sim again
+                # beam simulation
+                if not no_beam:
+                    self.single_sim(self.to_write, sim_no)
+                    self.details(sim_no)    # moving Ozone files named by simulation ID
+
+                # column simulation
                 sim_no = '{}col'.format(sim_no)
                 print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
                 try:
-                    self.b2c()  # beam coordinates to column coords
+                    self.b2c()  # change coordinates to column
                     self.single_sim(self.to_write, sim_no.split('a')[0])
 
                     # choosing worse scenario as single iteration output and checking its correctness
-                    print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
-                    self.worse()
+                    if not no_beam:
+                        print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
+                        self.worse()
                 except:
                     print('There is no column avilable')
                     pass
