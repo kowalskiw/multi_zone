@@ -196,7 +196,7 @@ class Fires:
             if hrr[-1] > config.hrr_max:
                 hrr[-1] = config.hrr_max
 
-        return hrr, area, fuel_zes, fuel_xes, fuel_yes
+        return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha
 
     # curve taking sprinklers into account
     def sprink_noeff(self, name, property=None):

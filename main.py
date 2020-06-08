@@ -3,7 +3,7 @@ import json as js
 from pynput.keyboard import Key, Controller
 import time
 from sys import argv
-from numpy import sqrt, log, random, pi
+from numpy import sqrt, log, random, pi, array
 from export import Export
 from fires import Fires
 
@@ -95,12 +95,20 @@ class CreateOZN:
             with open(self.title + '.op', 'r') as file:
                 holes = js.load(file)
         except FileNotFoundError:
+            self.to_write.extend([0, -1])    # write negatives to CSV
             print('There are no openings')
             return no_open
 
         # attach openings to a proper place in 'no_open' list
         for k, v in holes:
             [no_open.insert((int(k) - 1) * 15 + (int(v) - 1) * 5 + c, str(holes[k + v][c]) + '\n') for c in range(5)]
+
+        # write parameters to CSV
+        op_area = 0
+        for v in holes.values():
+            op_area += (v[1] - v[0]) * v[2]
+
+        self.to_write.extend([len(holes.keys()), op_area])
 
         return no_open[:60]  # cut unnecessary '\n' elements
 
@@ -116,11 +124,21 @@ class CreateOZN:
             print('There is no horizontal natural ventilation')
             tab_new.insert(0, '0\n')
             [tab_new.append('\n') for i in range(9)]
+            self.to_write.extend([0, -1])    # write negatives to CSV
             return tab_new
 
         # import data from config file
         tab_new.extend(ceil)
         [tab_new.append('\n') for i in range((3 - int(ceil[0])) * 3)]
+
+        # write parameters to CSV
+        cl_area = 0
+        cl_num = 0
+        for i in range(1, int(ceil[0][:-1])):
+            cl_area += (pi * float(ceil[i][:-1]) ** 2) / 4
+            cl_num += int(ceil[i+1])
+        self.to_write.extend([cl_num, cl_area])
+
         return tab_new
 
     # forced ventilation section
@@ -133,31 +151,40 @@ class CreateOZN:
             print('There is no forced ventilation')
             ext = ['0\n']
             [ext.append('\n') for i in range(12)]
+            self.to_write.extend([0, -1, -1, -1, -1, -1])    # write negatives to CSV
+            return ext
+
+        # write parameters to CSV
+        tot_flow = 0
+        for i in range(1, int(ext[0][:-1]), 3):
+            tot_flow += float(ext[i+2][:-1])
+        self.to_write.extend([ext[0][:-1], tot_flow])
+
         return ext
 
     # fire parameters section (curve, location)
     def fire(self):
 
-        global hrr, area, fuel_z, fuel_x, fuel_y
+        global hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha
         floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])  # important due to max fire area
 
         # fire randomizing function from Fires() class is called below
         f = Fires(floor_size, int(self.parameters()[6][:-1]))
         if self.f_type == 'alfat2':
-            hrr, area, fuel_z, fuel_x, fuel_y = f.alfa_t2(self.title)
+            hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.alfa_t2(self.title)
         elif self.f_type == 'alfat2_store':
-            hrr, area, fuel_z, fuel_x, fuel_y = f.alfa_t2(self.title, property='store')
+            hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.alfa_t2(self.title, property='store')
         elif self.f_type == 'sprink_eff':
-            hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_eff(self.title)
+            hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_eff(self.title)
         elif self.f_type == 'sprink_eff_store':
-            hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_eff(self.title, property='store')
+            hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_eff(self.title, property='store')
         elif self.f_type == 'sprink_noeff':
-            hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_noeff(self.title)
+            hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_noeff(self.title)
         elif self.f_type == 'sprink_noeff_store':
-            hrr, area, fuel_z, fuel_x, fuel_y = f.sprink_noeff(self.title, property='store')
+            hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
-        self.to_write.append(max(hrr[1::2]))    # write maximum HRR to CSV
+        self.to_write.extend([self.f_type, max(hrr[1::2])])    # write maximum HRR to CSV
 
         comp_h = self.geom()[2]  # import compartment height from GEOM config file
         diam = round(2 * sqrt(area / pi), 2)
@@ -175,31 +202,34 @@ class CreateOZN:
         tab_new.insert(0, '{}\n'.format(fuel_z[1] - zf))  # height of fuel above the fire base
 
         # overwriting absolute coordinates with relative ones (fire-element)
-        xr, yr, zr = self.fire_place(xf, yf, self.elements_dict(), zf=zf, element='b')
+        xr, yr, zr, export = self.fire_place(xf, yf, self.elements_dict(), zf=zf, element='b')
         tab_new.insert(5, '{}\n'.format(diam))
         tab_new.insert(6, '{}\n'.format(round(xr, 2)))
         tab_new.insert(7, '{}\n'.format(round(yr, 2)))
         tab_new.insert(3, '{}\n'.format(zr))  # height of temperature measurement
         tab_new.insert(9, '{}\n'.format(len(hrr) / 2))
 
+        # write parameters to CSV
+        self.to_write.extend([self.f_type, hrrpua, alpha, max(hrr[1::2]), diam/2, xf, yf, zf, xr, yr, zr] + export)
+
         return tab_new
 
     # mapping 3D structure to find the most exposed element
     def fire_place(self, xf, yf, elements, element='b', zf=0):
+        # check if there is a shell above the fire
+        try:
+            for sh in sorted(elements['geom']['shell']):
+                if float(sh) >= float(zf):
+                    shell = float(sh)
+                    self.geom(shell)
+                    break
+        except ValueError:
+            'There is no shell'
+
         # beams mapping
         if element == 'b':
             above_lvl = 0
             shell = -1
-
-            # check if there is a shell above the fire
-            try:
-                for sh in sorted(elements['geom']['shell']):
-                    if float(sh) >= zf:
-                        shell = float(sh)
-                        self.geom(shell)
-                        break
-            except ValueError:
-                'There is no shell'
 
             # check if beams lie between fire and shell level
             for lvl in elements['geom']['beams']:
@@ -208,7 +238,7 @@ class CreateOZN:
                     break
             if above_lvl == 0:
                 above_lvl = max(elements['geom']['beams'])
-            if float(above_lvl) >= shell:
+            if float(above_lvl) >= shell > 0:
                 print('There is no beam available')
                 self.no_beam = True
 
@@ -237,12 +267,15 @@ class CreateOZN:
             # check weather X or Y beam is closer to the fire and writing relative coordinates of closer one
             if nearest_x[1] < nearest_y[1]:
                 d_beam = (*nearest_x[0], float(above_lvl) - zf)
-                self.to_write.append(nearest_x[1])  # write fire--element distance to CSV
+                distance = nearest_x[1]  # fire--element 3D distance
             else:
-                d_beam = (*nearest_y[0], float(above_lvl) - zf)
-                self.to_write.append(nearest_y[1])  # write fire--element distance to CSV
 
-            return d_beam
+                d_beam = (*nearest_y[0], float(above_lvl) - zf)
+                distance = nearest_y[1]  # fire--element 3D distance
+
+            print(self.prof_type)
+
+            return (*d_beam, ['h', distance, self.prof_type])
 
         # columns mapping
         elif element == 'c':
@@ -261,16 +294,16 @@ class CreateOZN:
             prof = "HE HE"
             # iterate through all columns in all profile groups
             for group in elements['geom']['cols']:
-                if group[1] > zf > group[2]:    # check if column is not below the fire
+                if group[1] > float(zf) > group[2]:    # check if column is not below the fire
                     break
                 for col in group[3:]:
                     prof = elements['profiles'][group[0]]
                     d_col = nearestc(col, (xf, yf), d_col)
 
-            self.to_write.append((d_col[0] ** 2 + d_col[1] ** 2) ** 0.5)    # write fire--element distance to CSV
+            distance = (d_col[0] ** 2 + d_col[1] ** 2) ** 0.5    # fire--element distance
             print(self.prof_type)
 
-            return (*d_col, 1.2)
+            return (*d_col, 1.2, ['v', distance, self.prof_type])
 
     # raw OZone strategy section
     def strategy(self):
@@ -388,7 +421,7 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
-        self.save_samp = 10
+        self.save_samp = 2
         self.sim_time = int(time.time())
         self.to_write = []
         self.rset = rset
@@ -448,12 +481,16 @@ class Main:
 
         # writing results to results output CSV database
         self.results.append([sim_id, self.choose_max(), self.choose_crit(), *export_list])
+        print("sim saved")
 
     # changing relative coordinates from beam to column
     def b2c(self):
         # checking most exposed column coordinates
         c = CreateOZN(*self.paths, self.f_type)
-        xr, yr, zr = c.fire_place(*self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
+
+        # to tutaj jest błąd, przy przejściu do firplace
+        xr, yr, zr, export = c.fire_place(*self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
+        self.to_write.extend(export)    # write element characteristics to CSV
         chdir(self.paths[1])
 
         # overwriting coordinates in OZN file
@@ -480,7 +517,8 @@ class Main:
 
     # removing false results caused by OZone's "Loaded file" error
     def remove_false(self):
-        if self.results[-2][4:8] == self.results[-1][4:8]:
+        # check if time_crit and temp_crit are equal in both column and beam case
+        if self.results[-2][1:3] == self.results[-1][1:3]:
             self.results.pop(-1)
             self.results.pop(-2)
             self.falses += 1
