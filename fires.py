@@ -186,15 +186,15 @@ class Fires:
         elif property == 'store':
             alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
 
-        area = config.hrr_max / hrrpua
+        area = min(config.hrr_max / hrrpua, self.a_max)
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
         for t_frag in range(0, 120):
             t = self.t_end * t_frag/119
             hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
-            if hrr[-1] > config.hrr_max:
-                hrr[-1] = config.hrr_max
+            if hrr[-1] > area * hrrpua:
+                hrr[-1] = area * hrrpua
 
         return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha
 
@@ -215,7 +215,7 @@ class Fires:
         elif property == 'store':
             alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
 
-        q_0 = alpha * config.t_sprink ** 2
+        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)
 
         area = q_0 / hrrpua
 
@@ -247,7 +247,7 @@ class Fires:
         elif property == 'store':
             alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
 
-        q_0 = alpha * config.t_sprink ** 2
+        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)
 
         area = q_0 / hrrpua
 

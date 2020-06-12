@@ -45,9 +45,9 @@ class Export:
             writelist.append(','.join(i) + '\n')
         if '{}.csv'.format(title) not in listdir('.'):
             writelist.insert(0, ','.join(['ID', 't_max', 'time_crit', 'vent_num', 'vent_area', 'ceil_num', 'ceil_area',
-                                          'ext_num', 'ext_flow', 'fire_type', 'hrr_max', 'hrrpua', 'alpha',
-                                          'abs_x', 'abs_y', 'abs_z', 'rel_x', 'rel_y', 'rel_z', 'fire_r', 'distance3D',
-                                          'LCF_h', 'element', 'profile\n']))
+                                          'ext_num', 'ext_flow', 'fire_type', 'hrrpua', 'alpha', 'hrr_max', 'fire_r',
+                                          'abs_x', 'abs_y', 'abs_z', 'rel_x', 'rel_y', 'rel_z', 'distance3D',
+                                          'LCF_h', 'element', 'profile', 'shell\n']))
         with open('{}.csv'.format(title), 'a') as file:
             file.writelines(writelist)
 

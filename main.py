@@ -134,8 +134,8 @@ class CreateOZN:
         # write parameters to CSV
         cl_area = 0
         cl_num = 0
-        for i in range(1, int(ceil[0][:-1])):
-            cl_area += (pi * float(ceil[i][:-1]) ** 2) / 4
+        for i in range(1, int(ceil[0][:-1])+1):
+            cl_area += (pi * float(ceil[i][:-1]) ** 2) / 4 * int(ceil[0][:-1])
             cl_num += int(ceil[i+1])
         self.to_write.extend([cl_num, cl_area])
 
@@ -157,15 +157,14 @@ class CreateOZN:
         # write parameters to CSV
         tot_flow = 0
         for i in range(1, int(ext[0][:-1]), 3):
-            tot_flow += float(ext[i+2][:-1])
-        self.to_write.extend([ext[0][:-1], tot_flow])
+            tot_flow += abs(float(ext[i+2][:-1]))
+        self.to_write.extend([int(ext[0][:-1]), tot_flow])
 
         return ext
 
     # fire parameters section (curve, location)
     def fire(self):
 
-        global hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha
         floor_size = self.floor[0] * self.floor[1] * float(self.strategy()[5][:-1])  # important due to max fire area
 
         # fire randomizing function from Fires() class is called below
@@ -184,25 +183,25 @@ class CreateOZN:
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
-        self.to_write.extend([self.f_type, max(hrr[1::2])])    # write maximum HRR to CSV
 
-        comp_h = self.geom()[2]  # import compartment height from GEOM config file
         diam = round(2 * sqrt(area / pi), 2)
 
         # tab_new = [fire_type, distance_on_X_axis, number_of_fires]
         tab_new = ['Localised\n', '0\n', '1\n']
-        tab_new.insert(1, comp_h)
 
         # insert HRR(t) fire curve to the list
         for i in hrr:
             tab_new.append('{}\n'.format(i))
 
         xf, yf, zf = random_position(fuel_x, fuel_y, zes=fuel_z)  # fire position sampling
-        self.to_write.extend([xf, yf, zf, diam / 2])  # write fire geometry to CSV
         tab_new.insert(0, '{}\n'.format(fuel_z[1] - zf))  # height of fuel above the fire base
 
         # overwriting absolute coordinates with relative ones (fire-element)
         xr, yr, zr, export = self.fire_place(xf, yf, self.elements_dict(), zf=zf, element='b')
+        if export[4] > 0:  # save ceiling height for LOCAFI from GEOM config file or shell height
+            tab_new.insert(2, '{}\n'.format(export[4]))
+        else:
+            tab_new.insert(2, self.geom()[2])
         tab_new.insert(5, '{}\n'.format(diam))
         tab_new.insert(6, '{}\n'.format(round(xr, 2)))
         tab_new.insert(7, '{}\n'.format(round(yr, 2)))
@@ -217,11 +216,11 @@ class CreateOZN:
     # mapping 3D structure to find the most exposed element
     def fire_place(self, xf, yf, elements, element='b', zf=0):
         # check if there is a shell above the fire
+        shell = -1
         try:
             for sh in sorted(elements['geom']['shell']):
                 if float(sh) >= float(zf):
                     shell = float(sh)
-                    self.geom(shell)
                     break
         except ValueError:
             'There is no shell'
@@ -229,16 +228,15 @@ class CreateOZN:
         # beams mapping
         if element == 'b':
             above_lvl = 0
-            shell = -1
 
             # check if beams lie between fire and shell level
             for lvl in elements['geom']['beams']:
                 if float(lvl) > zf:
-                    above_lvl = lvl
+                    above_lvl = float(lvl)
                     break
             if above_lvl == 0:
                 above_lvl = max(elements['geom']['beams'])
-            if float(above_lvl) >= shell > 0:
+            if above_lvl > shell > 0:
                 print('There is no beam available')
                 self.no_beam = True
 
@@ -247,7 +245,7 @@ class CreateOZN:
             # finding nearest beam; iterating through all beams at certain level and direction
             def nearestb(axis_str, af, bf):
                 deltas = [999, 0]
-                for beam in elements['geom']['beams'][above_lvl][axis_str]:
+                for beam in elements['geom']['beams'][str(above_lvl)][axis_str]:
                     if beam[2] <= bf <= beam[3]:
                         distx = af - beam[1]
                         disty = 0
@@ -266,16 +264,16 @@ class CreateOZN:
 
             # check weather X or Y beam is closer to the fire and writing relative coordinates of closer one
             if nearest_x[1] < nearest_y[1]:
-                d_beam = (*nearest_x[0], float(above_lvl) - zf)
-                distance = nearest_x[1]  # fire--element 3D distance
+                d_beam = (*nearest_x[0], above_lvl - zf)
+                distance = (nearest_x[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
             else:
 
-                d_beam = (*nearest_y[0], float(above_lvl) - zf)
-                distance = nearest_y[1]  # fire--element 3D distance
+                d_beam = (*nearest_y[0], above_lvl - zf)
+                distance = (nearest_y[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
 
             print(self.prof_type)
 
-            return (*d_beam, ['h', distance, self.prof_type])
+            return (*d_beam, [distance, shell-zf, 'h', self.prof_type, shell])
 
         # columns mapping
         elif element == 'c':
@@ -300,10 +298,10 @@ class CreateOZN:
                     prof = elements['profiles'][group[0]]
                     d_col = nearestc(col, (xf, yf), d_col)
 
-            distance = (d_col[0] ** 2 + d_col[1] ** 2) ** 0.5    # fire--element distance
-            print(self.prof_type)
+            distance = (d_col[0] ** 2 + d_col[1] ** 2 + (zf-1.2)**2) ** 0.5    # fire--element 3D distance
+            print(prof)
 
-            return (*d_col, 1.2, ['v', distance, self.prof_type])
+            return (*d_col, 1.2, [distance, shell-zf, 'v', self.prof_type, shell])
 
     # raw OZone strategy section
     def strategy(self):
@@ -481,16 +479,17 @@ class Main:
 
         # writing results to results output CSV database
         self.results.append([sim_id, self.choose_max(), self.choose_crit(), *export_list])
-        print("sim saved")
 
     # changing relative coordinates from beam to column
     def b2c(self):
         # checking most exposed column coordinates
         c = CreateOZN(*self.paths, self.f_type)
 
-        # to tutaj jest błąd, przy przejściu do firplace
-        xr, yr, zr, export = c.fire_place(*self.to_write[2:4], c.elements_dict(), zf=self.to_write[4], element='c')
-        self.to_write.extend(export)    # write element characteristics to CSV
+        # change relative coords and element data to column
+        xr, yr, zr, export = c.fire_place(*self.to_write[13:15], c.elements_dict(), zf=self.to_write[15], element='c')
+        col_to_write = self.to_write[:14] + [xr, yr, zr] + export
+        self.to_write = col_to_write
+
         chdir(self.paths[1])
 
         # overwriting coordinates in OZN file
@@ -564,7 +563,7 @@ class Main:
                         print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
                         self.worse()
                 except:
-                    print('There is no column avilable')
+                    print('There is no column avilable or an error occured')
                     pass
 
                 # check for error in results table, removing them and restarting OZone if necessary
