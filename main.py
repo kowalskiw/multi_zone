@@ -173,13 +173,13 @@ class CreateOZN:
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.alfa_t2(self.title)
         elif self.f_type == 'alfat2_store':
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.alfa_t2(self.title, property='store')
-        elif self.f_type == 'sprink_eff':
+        elif self.f_type == 'sprink-eff':
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_eff(self.title)
-        elif self.f_type == 'sprink_eff_store':
+        elif self.f_type == 'sprink-eff_store':
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_eff(self.title, property='store')
-        elif self.f_type == 'sprink_noeff':
+        elif self.f_type == 'sprink-noeff':
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_noeff(self.title)
-        elif self.f_type == 'sprink_noeff_store':
+        elif self.f_type == 'sprink-noeff_store':
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
@@ -222,7 +222,7 @@ class CreateOZN:
                 if float(sh) >= float(zf):
                     shell = float(sh)
                     break
-        except ValueError:
+        except KeyError:
             'There is no shell'
 
         # beams mapping
@@ -300,6 +300,9 @@ class CreateOZN:
 
             distance = (d_col[0] ** 2 + d_col[1] ** 2 + (zf-1.2)**2) ** 0.5    # fire--element 3D distance
             print(prof)
+
+            print(zf)
+            print(*d_col, 1.2, [distance, shell-zf, 'v', self.prof_type, shell])
 
             return (*d_col, 1.2, [distance, shell-zf, 'v', self.prof_type, shell])
 
@@ -419,7 +422,7 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
-        self.save_samp = 2
+        self.save_samp = 10
         self.sim_time = int(time.time())
         self.to_write = []
         self.rset = rset
@@ -486,7 +489,7 @@ class Main:
         c = CreateOZN(*self.paths, self.f_type)
 
         # change relative coords and element data to column
-        xr, yr, zr, export = c.fire_place(*self.to_write[13:15], c.elements_dict(), zf=self.to_write[15], element='c')
+        xr, yr, zr, export = c.fire_place(*self.to_write[11:13], c.elements_dict(), zf=self.to_write[13], element='c')
         col_to_write = self.to_write[:14] + [xr, yr, zr] + export
         self.to_write = col_to_write
 
