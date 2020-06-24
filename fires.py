@@ -208,23 +208,24 @@ class Fires:
         fuel_yes = (config.YA, config.YB)
         fuel_zes = (config.ZA, config.ZB)
 
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode) * 1000  # [kW]
 
         if not property:
-            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)  # [kW/s2]
         elif property == 'store':
-            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
+            alpha = hrrpua * random.lognormal(-9.72, 0.97)   # [kW/s2]
 
-        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)
+        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)    # [kW]
 
-        area = q_0 / hrrpua
+        area = q_0 / hrrpua     # [m2]
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t_frag in range(0,120):
+        for t_frag in range(0, 120):
             t = self.t_end * t_frag/120
 
             if t >= config.t_sprink:
+                #                                 [min], [kW/s2 * 1k * s2]=[MW]
                 hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (config.t_sprink ** 2)]])
             else:
                 hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
@@ -240,25 +241,24 @@ class Fires:
         fuel_yes = (config.YA, config.YB)
         fuel_zes = (config.ZA, config.ZB)
 
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode) * 1000  # [kW]
 
         if not property:
-            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)  # [kW/s2]
         elif property == 'store':
-            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
+            alpha = hrrpua * random.lognormal(-9.72, 0.97)   # [kW/s2]
 
-        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)
+        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)    # [kW]
 
-        area = q_0 / hrrpua
+        area = q_0 / hrrpua     # [m2]
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
-        for t_frag in range(0,120):
+        for t_frag in range(0, 120):
             t = self.t_end * t_frag/120
             if t >= config.t_sprink:
-                q = q_0 * exp(-0.0024339414 * (t - config.t_sprink)) / 1000
-                # print(q_0)
-                # print(t, config.t_sprink, q)
+                q = q_0 * exp(-0.0024339414 * (t - config.t_sprink)) / 1000     # MW
+
                 if q >= q_0 * 0.00015:
                     hrr.extend([round(i, 4) for i in [t / 60, q]])
                 else:
