@@ -229,7 +229,7 @@ class Fires:
             else:
                 hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
 
-        return hrr, area, fuel_zes, fuel_xes, fuel_yes
+        return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha
 
     def sprink_eff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
@@ -266,4 +266,4 @@ class Fires:
             else:
                 hrr.extend([round(i, 4) for i in [t / 60, alpha / 1000 * (t ** 2)]])
 
-        return hrr, area, fuel_zes, fuel_xes, fuel_yes
+        return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha

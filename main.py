@@ -222,7 +222,7 @@ class CreateOZN:
                 if float(sh) >= float(zf):
                     shell = float(sh)
                     break
-        except ValueError:
+        except KeyError:
             'There is no shell'
 
         # beams mapping
