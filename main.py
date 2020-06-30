@@ -151,7 +151,7 @@ class CreateOZN:
             print('There is no forced ventilation')
             ext = ['0\n']
             [ext.append('\n') for i in range(12)]
-            self.to_write.extend([0, -1, -1, -1, -1, -1])    # write negatives to CSV
+            self.to_write.extend([0, -1])    # write negatives to CSV
             return ext
 
         # write parameters to CSV
@@ -235,9 +235,11 @@ class CreateOZN:
                     above_lvl = float(lvl)
                     break
             if above_lvl == 0:
-                above_lvl = max(elements['geom']['beams'])
+                # above_lvl = max(elements['geom']['beams'])
+                print('There is no beam available - fire above beams')
+                self.no_beam = True
             if above_lvl > shell > 0:
-                print('There is no beam available')
+                print('There is no beam available - beams covered by shell')
                 self.no_beam = True
 
             print('Analised beam level: {}'.format(above_lvl))
@@ -292,7 +294,7 @@ class CreateOZN:
             prof = "HE HE"
             # iterate through all columns in all profile groups
             for group in elements['geom']['cols']:
-                if group[1] > float(zf) > group[2]:    # check if column is not below the fire
+                if not group[1] < float(zf) < group[2]:    # check if column is not below the fire
                     break
                 for col in group[3:]:
                     prof = elements['profiles'][group[0]]
@@ -489,8 +491,9 @@ class Main:
         c = CreateOZN(*self.paths, self.f_type)
 
         # change relative coords and element data to column
-        xr, yr, zr, export = c.fire_place(*self.to_write[11:13], c.elements_dict(), zf=self.to_write[13], element='c')
-        col_to_write = self.to_write[:14] + [xr, yr, zr] + export
+        xr, yr, zr, export = c.fire_place(*self.to_write[15:17], c.elements_dict(), zf=self.to_write[17]
+                                          , element='c')
+        col_to_write = self.to_write[:18] + [xr, yr, zr] + export
         self.to_write = col_to_write
 
         chdir(self.paths[1])
@@ -637,6 +640,8 @@ if __name__ == '__main__':
     # {6} RSET -- Required Safe Evacuation Time according to BS
     # {7} max_iterations -- number of simulations to run
     # (8) hardware -- rate of delays (depends on hardware and sim complexity)
+    # (9) stop -- multisimulation stops when RMSE <= 1e-3 or iterations limit ("rmse") or only iterations limit
+    # ("whatever")
 
     Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
 
