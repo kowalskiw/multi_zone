@@ -489,8 +489,8 @@ class Main:
         c = CreateOZN(*self.paths, self.f_type)
 
         # change relative coords and element data to column
-        xr, yr, zr, export = c.fire_place(*self.to_write[11:13], c.elements_dict(), zf=self.to_write[13], element='c')
-        col_to_write = self.to_write[:14] + [xr, yr, zr] + export
+        xr, yr, zr, export = c.fire_place(*self.to_write[15:17], c.elements_dict(), zf=self.to_write[17], element='c')
+        col_to_write = self.to_write[:18] + [xr, yr, zr] + export
         self.to_write = col_to_write
 
         chdir(self.paths[1])
