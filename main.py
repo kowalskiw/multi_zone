@@ -303,9 +303,6 @@ class CreateOZN:
             distance = (d_col[0] ** 2 + d_col[1] ** 2 + (zf-1.2)**2) ** 0.5    # fire--element 3D distance
             print(prof)
 
-            print(zf)
-            print(*d_col, 1.2, [distance, shell-zf, 'v', self.prof_type, shell])
-
             return (*d_col, 1.2, [distance, shell-zf, 'v', self.prof_type, shell])
 
     # raw OZone strategy section
@@ -388,6 +385,8 @@ class RunSim:
         time.sleep(1 * self.hware_rate)
         with self.keys.pressed(Key.alt):
             self.keys.press(Key.f4)
+        popen('taskkill /im ozone.exe /f')  # killing ozone processes
+        time.sleep(1)
 
     def run_simulation(self):
         keys = self.keys
@@ -396,6 +395,9 @@ class RunSim:
         with keys.pressed(Key.ctrl):
             keys.press('o')
         time.sleep(1)
+        keys.press(Key.tab)
+        keys.press(Key.tab)
+        keys.press(Key.enter)   # in case of error: open file 0
         keys.type(self.sim_path)
         time.sleep(1)
         keys.press(Key.enter)
@@ -424,7 +426,7 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
-        self.save_samp = 10
+        self.save_samp = 5
         self.sim_time = int(time.time())
         self.to_write = []
         self.rset = rset
@@ -491,9 +493,9 @@ class Main:
         c = CreateOZN(*self.paths, self.f_type)
 
         # change relative coords and element data to column
-        xr, yr, zr, export = c.fire_place(*self.to_write[15:17], c.elements_dict(), zf=self.to_write[17]
+        xr, yr, zr, export = c.fire_place(*self.to_write[11:13], c.elements_dict(), zf=self.to_write[13]
                                           , element='c')
-        col_to_write = self.to_write[:18] + [xr, yr, zr] + export
+        col_to_write = self.to_write[:14] + [xr, yr, zr] + export
         self.to_write = col_to_write
 
         chdir(self.paths[1])
@@ -528,7 +530,7 @@ class Main:
             self.results.pop(-2)
             self.falses += 1
             print('OZone error occured -- false results removed')
-            print('Till now {} errors like that have occured'.format(self.falses))
+            print('Till now {} errors have occured'.format(self.falses))
             return True
         return False
 
@@ -563,6 +565,7 @@ class Main:
                 try:
                     self.b2c()  # change coordinates to column
                     self.single_sim(self.to_write, sim_no.split('a')[0])
+                    self.details(sim_no)    # saving column simulation details
 
                     # choosing worse scenario as single iteration output and checking its correctness
                     if not no_beam:
@@ -580,7 +583,7 @@ class Main:
                             self.rs.close_ozn()
                             time.sleep(1)
                             self.rs.open_ozone()
-                        print("Step finished with an error, restarting iteration.")
+                        print("Step finished with severe error, restarting iteration.")
                         sim_no = sim_no.split('col')[0] + 'a'
                         continue
                     else:
@@ -603,7 +606,7 @@ class Main:
         # safe closing code:
         self.rs.close_ozn()
 
-        print("Multisimulation finished OK")
+        print("Multisimulation finished OK, well done engineer!")
 
 
 # calculating critical temperature according to equation from Eurocode 3
@@ -628,7 +631,7 @@ if __name__ == '__main__':
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
             print(user)
     except IndexError:
-        print("Use USER file as an argument.")
+        print("Give me USER file as an argument.")
 
     # USER file consists of:
     # {0} ozone -- OZone program directory,
