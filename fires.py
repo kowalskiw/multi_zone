@@ -187,6 +187,7 @@ class Fires:
             alpha = hrrpua * random.lognormal(-9.72, 0.97)       # kW/s2
 
         area = min(config.hrr_max / hrrpua * 1000, self.a_max)     # m2
+        area = config.hrr_max / hrrpua * 1000  # m2
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
@@ -215,7 +216,8 @@ class Fires:
         elif property == 'store':
             alpha = hrrpua * random.lognormal(-9.72, 0.97)   # [kW/s2]
 
-        q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)    # [kW]
+        # q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)    # [kW]
+        q_0 = alpha * config.t_sprink ** 2  # [kW]
 
         area = q_0 / hrrpua     # [m2]
 
@@ -249,6 +251,7 @@ class Fires:
             alpha = hrrpua * random.lognormal(-9.72, 0.97)   # [kW/s2]
 
         q_0 = min(alpha * config.t_sprink ** 2, self.a_max * hrrpua)    # [kW]
+        q_0 = alpha * config.t_sprink ** 2  # [kW]
 
         area = q_0 / hrrpua     # [m2]
 

@@ -564,8 +564,10 @@ class Main:
                 sim_no = '{}col'.format(sim_no)
                 print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
                 try:
+                    print(self.to_write)
                     self.b2c()  # change coordinates to column
                     self.single_sim(self.to_write, sim_no.split('a')[0])
+                    print(self.to_write)
                     self.details(sim_no)    # saving column simulation details
 
                     # choosing worse scenario as single iteration output and checking its correctness
