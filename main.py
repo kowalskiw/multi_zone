@@ -156,9 +156,10 @@ class CreateOZN:
 
         # write parameters to CSV
         tot_flow = 0
-        for i in range(1, int(ext[0][:-1]), 3):
-            tot_flow += abs(float(ext[i+2][:-1]))
-        self.to_write.extend([int(ext[0][:-1]), tot_flow])
+        ext_no = int(ext[0][:-1])
+        for i in range(ext_no):
+            tot_flow += abs(float(ext[i+7][:-1]))
+        self.to_write.extend([ext_no, tot_flow])
 
         return ext
 

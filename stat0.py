@@ -18,17 +18,17 @@ class Machine:
                     return "I am busy, McSAFIR is running"
                 elif "ozone.exe" in proc.name().lower():
                     self.status = 2
-                    return "I am busy, MulitZone is running"                    
+                    return "I am busy, MulitZone is running"
             except (pl.NoSuchProcess, pl.AccessDenied, pl.ZombieProcess):
                 pass
-                
+
         free_tab = ["Machine is free, let's give it some job to do!", "I'm ready for new challenge!", \
         "Waiting for your commands, sir!", "Bored and antsy...", "I'd love to calculate something!", \
         "Don't let me wait with the next job", "Is it a vacation or what?", "What about little simulating?",\
         "Don't you have some simulations to conduct?"]
-        
+
         return free_tab[rr(len(free_tab))]
-            
+
     def elapsed(self):
         pass
 
@@ -37,7 +37,7 @@ class Machine:
 
         if self.status:
             pass
-            
+
     def write_stat(self, stat):
         os.chdir("C:\MultiZone")
         for i in range(5):
@@ -50,8 +50,8 @@ class Machine:
                 print("Warning: Permission denied, trying again")
                 continue
             break
-            
-            
+
+
     def stat(self):
         while True:
             for i in range(5):
@@ -63,7 +63,7 @@ class Machine:
                 else:
                     time.sleep(10-2*i)
                     break
-                
+
             self.write_stat(stat)
             print(stat)
 

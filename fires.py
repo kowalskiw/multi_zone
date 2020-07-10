@@ -179,14 +179,14 @@ class Fires:
         fuel_yes = (config.YA, config.YB)
         fuel_zes = (config.ZA, config.ZB)
 
-        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode)
+        hrrpua = triangular(config.hrrpua_min, config.hrrpua_max, mode=config.hrrpua_mode) * 1000     # kW/m2
 
         if not property:
-            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)
+            alpha = triangular(config.alpha_min, config.alpha_max, mode=config.alpha_mode)      # kW/s2
         elif property == 'store':
-            alpha = hrrpua * 1000 * random.lognormal(-9.72, 0.97)
+            alpha = hrrpua * random.lognormal(-9.72, 0.97)       # kW/s2
 
-        area = min(config.hrr_max / hrrpua, self.a_max)
+        area = min(config.hrr_max / hrrpua * 1000, self.a_max)     # m2
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
