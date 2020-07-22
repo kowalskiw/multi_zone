@@ -1,4 +1,4 @@
-from os import listdir, getcwd, chdir, popen, mkdir, path
+from os import listdir, getcwd, chdir, popen, mkdir, path, replace
 import json as js
 from pynput.keyboard import Key, Controller
 import time
@@ -6,6 +6,7 @@ from sys import argv
 from numpy import sqrt, log, random, pi, array
 from export import Export
 from fires import Fires
+from shutil import move
 
 
 '''functions of CreateOZN class is related to another config file
@@ -95,7 +96,7 @@ class CreateOZN:
             with open(self.title + '.op', 'r') as file:
                 holes = js.load(file)
         except FileNotFoundError:
-            self.to_write.extend([0, -1])    # write negatives to CSV
+            self.to_write.extend([0, "null"])    # write negatives to CSV
             print('There are no openings')
             return no_open
 
@@ -124,7 +125,7 @@ class CreateOZN:
             print('There is no horizontal natural ventilation')
             tab_new.insert(0, '0\n')
             [tab_new.append('\n') for i in range(9)]
-            self.to_write.extend([0, -1])    # write negatives to CSV
+            self.to_write.extend([0, "null"])    # write negatives to CSV
             return tab_new
 
         # import data from config file
@@ -151,15 +152,20 @@ class CreateOZN:
             print('There is no forced ventilation')
             ext = ['0\n']
             [ext.append('\n') for i in range(12)]
-            self.to_write.extend([0, -1])    # write negatives to CSV
+            self.to_write.extend([0, "null", "null"])    # write negatives to CSV
             return ext
 
         # write parameters to CSV
-        tot_flow = 0
-        ext_no = int(ext[0][:-1])
-        for i in range(ext_no):
-            tot_flow += abs(float(ext[i+7][:-1]))
-        self.to_write.extend([ext_no, tot_flow])
+        flow_in = 0
+        flow_out = 0
+
+        for i in range(3):
+            if ext[-(1+i)] == "out\n":
+                flow_out += float(ext[-(4+i)])
+            elif ext[-(1+i)] == "in\n":
+                flow_in += float(ext[-(4+i)])
+
+        self.to_write.extend([int(ext[0][:-1]), flow_in, flow_out])
 
         return ext
 
@@ -216,7 +222,8 @@ class CreateOZN:
 
     # mapping 3D structure to find the most exposed element
     def fire_place(self, xf, yf, elements, element='b', zf=0):
-        # check if there is a shell above the fire
+
+        # check if there is any shell above the fire
         shell = -1
         try:
             for sh in sorted(elements['geom']['shell']):
@@ -236,36 +243,35 @@ class CreateOZN:
                     above_lvl = float(lvl)
                     break
             if above_lvl == 0:
-                # above_lvl = max(elements['geom']['beams'])
-                print('There is no beam available - fire above beams')
+                print('There is no beam available - fire ({}m) above beams ({})m'.format(zf, above_lvl))
                 self.no_beam = True
             if above_lvl > shell > 0:
-                print('There is no beam available - beams covered by shell')
+                print('There is no beam available - beams ({}m) covered by shell ({}m)'.format(above_lvl, shell))
                 self.no_beam = True
+            else:
+                print('Analised beam level: {}m'.format(above_lvl))
 
-            print('Analised beam level: {}'.format(above_lvl))
-
-            # finding nearest beam; iterating through all beams at certain level and direction
+            # finding nearest beam; iterating through all beams at above_level
             def nearestb(axis_str, af, bf):
                 deltas = [999, 0]
                 for beam in elements['geom']['beams'][str(above_lvl)][axis_str]:
                     if beam[2] <= bf <= beam[3]:
-                        distx = af - beam[1]
-                        disty = 0
+                        dista = af - beam[1]
+                        distb = 0
                     else:
-                        distx = af - beam[1]
-                        disty = bf - max(beam[2], beam[3])
-                    if (distx ** 2 + disty ** 2) ** 0.5 < (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5:
-                        deltas = [distx, disty]
+                        dista = af - beam[1]
+                        distb = bf - max(beam[2], beam[3])
+                    # overwrite if closer to fire
+                    if (dista ** 2 + distb ** 2) ** 0.5 < (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5:
+                        deltas = [dista, distb]
                         self.prof_type = elements['profiles'][int(beam[0])]
-                if axis_str == 'Y':
-                    deltas.reverse()
+
                 return deltas, (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5
 
             nearest_x = tuple(nearestb('X', xf, yf))
-            nearest_y = tuple(nearestb('Y', yf, xf))
+            nearest_y = tuple(nearestb('Y', xf, yf))
 
-            # check weather X or Y beam is closer to the fire and writing relative coordinates of closer one
+            # check weather X or Y beam is closer to the fire and writing relative coordinates of the closer one
             if nearest_x[1] < nearest_y[1]:
                 d_beam = (*nearest_x[0], above_lvl - zf)
                 distance = (nearest_x[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
@@ -276,6 +282,7 @@ class CreateOZN:
 
             print(self.prof_type)
 
+            # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
             return (*d_beam, [distance, shell-zf, 'h', self.prof_type, shell])
 
         # columns mapping
@@ -286,14 +293,14 @@ class CreateOZN:
                 disty = fire_pos[1] - col_pos[1]
                 # compare distance of certain column with the nearest so far
                 if (distx ** 2 + disty ** 2) ** 0.5 < (d_prev[0] ** 2 + d_prev[1] ** 2) ** 0.5:
-                    d_prev = (distx, disty)
+                    d_prev = [distx, disty]
 
                     self.prof_type = prof
                 return d_prev
 
             d_col = (999, 0)
             prof = "HE HE"
-            # iterate through all columns in all profile groups
+            # iterate through all columns in all groups
             for group in elements['geom']['cols']:
                 if not group[1] < float(zf) < group[2]:    # check if column is not below the fire
                     break
@@ -301,10 +308,17 @@ class CreateOZN:
                     prof = elements['profiles'][group[0]]
                     d_col = nearestc(col, (xf, yf), d_col)
 
-            distance = (d_col[0] ** 2 + d_col[1] ** 2 + (zf-1.2)**2) ** 0.5    # fire--element 3D distance
-            print(prof)
+            # check if shell does cover the most exposed point
+            if shell - zf < 1.2:
+                d_col.append(shell - zf)
+            else:
+                d_col.append(1.2)
 
-            return (*d_col, 1.2, [distance, shell-zf, 'v', self.prof_type, shell])
+            distance = (d_col[0] ** 2 + d_col[1] ** 2 + d_col[2]**2) ** 0.5    # fire--element 3D distance
+            print(self.prof_type)
+
+            # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
+            return (*d_col, [distance, shell-zf, 'v', self.prof_type, shell])
 
     # raw OZone strategy section
     def strategy(self):
@@ -380,14 +394,12 @@ class RunSim:
         self.keys.press(Key.enter)
         time.sleep(7 * self.hware_rate)
 
-        print('OZone3 is running')
+        print('OZone3 alive')
 
     def close_ozn(self):
-        time.sleep(1 * self.hware_rate)
-        with self.keys.pressed(Key.alt):
-            self.keys.press(Key.f4)
         popen('taskkill /im ozone.exe /f')  # killing ozone processes
-        time.sleep(1)
+        print('OZone3 instance killed')
+        time.sleep(self.hware_rate)
 
     def run_simulation(self):
         keys = self.keys
@@ -427,7 +439,7 @@ class Main:
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
-        self.save_samp = 5
+        self.save_samp = 2
         self.sim_time = int(time.time())
         self.to_write = []
         self.rset = rset
@@ -447,12 +459,12 @@ class Main:
 
     # saving simulation's files in details subcatalogue
     def details(self, simulation_number):
-
-        for type in ['.ozn', '.stt', '.pri', '.out']:
-            with open('{}\{}{}'.format(self.paths[1], self.paths[-1], type)) as file:
-                to_save = file.read()
-            with open('{}\details\{}{}'.format(self.paths[1], simulation_number, type), 'w') as file:
-                file.write(to_save)
+        for type in ['.ozn', '.stt', '.pri', '.out', '.dat']:
+            try:
+                replace('{}\{}{}'.format(self.paths[1], self.paths[-1], type),
+                    '{}\details\{}{}'.format(self.paths[1], simulation_number, type))
+            except FileNotFoundError:
+                pass
 
     def choose_max(self):
         time, temp = zip(*self.add_data())
@@ -482,27 +494,45 @@ class Main:
 
     # single simulation handling
     def single_sim(self, export_list, sim_id):
-        self.rs.run_simulation()
-        time.sleep(1)
+        for i in range(3):
+            self.rs.run_simulation()
+            time.sleep(1)
+            try:
+                t_max = self.choose_max()
+                time_crit = self.choose_crit()
+                self.results.append([sim_id, t_max, time_crit, *export_list])
+                return True
 
-        # writing results to results output CSV database
-        self.results.append([sim_id, self.choose_max(), self.choose_crit(), *export_list])
+            except FileNotFoundError:
+                print("An OZone error occured -- I've tried to rerun simulation ({})".format(i + 1))
+                self.rs.close_ozn()
+                time.sleep(1)
+                self.rs.open_ozone()
+
+        self.falses += 1
+        print('Severe OZone error occured -- simulation passed and OZone restarted\n'
+              'Till now {} errors have occured'.format(self.falses))
+
+        return False
 
     # changing relative coordinates from beam to column
-    def b2c(self):
+    def b2c(self, sim_no):
         # checking most exposed column coordinates
         c = CreateOZN(*self.paths, self.f_type)
 
         # change relative coords and element data to column
-        xr, yr, zr, export = c.fire_place(*self.to_write[11:13], c.elements_dict(), zf=self.to_write[13]
+        # watch out for self.to_write's indexes here
+        # when you set them improperly you will get "there is an error with profile not found (...)
+        xr, yr, zr, export = c.fire_place(*self.to_write[12:14], c.elements_dict(), zf=self.to_write[14]
                                           , element='c')
-        col_to_write = self.to_write[:14] + [xr, yr, zr] + export
+        col_to_write = self.to_write[:15] + [xr, yr, zr] + export
         self.to_write = col_to_write
 
         chdir(self.paths[1])
 
         # overwriting coordinates in OZN file
-        with open('{}.ozn'.format(self.paths[-1])) as file:
+        print(self.paths)
+        with open('{}\details\{}.ozn'.format(self.paths[1], sim_no)) as file:
             ftab = file.readlines()
         ftab[302] = '{}\n'.format(zr)
         ftab[306] = '{}\n'.format(xr)
@@ -523,20 +553,20 @@ class Main:
         else:
             self.results.pop(-1)
 
-    # removing false results caused by OZone's "Loaded file" error
-    def remove_false(self):
-        # check if time_crit and temp_crit are equal in both column and beam case
-        if self.results[-2][1:3] == self.results[-1][1:3]:
-            self.results.pop(-1)
-            self.results.pop(-2)
-            self.falses += 1
-            print('OZone error occured -- false results removed')
-            print('Till now {} errors have occured'.format(self.falses))
-            return True
-        return False
+    # # removing false results caused by OZone's "Loaded file" error
+    # def remove_false(self):
+    #     # check if time_crit and temp_crit are equal in both column and beam case
+    #     if self.results[-2][1:3] == self.results[-1][1:3]:
+    #         self.results.pop(-1)
+    #         self.results.pop(-2)
+    #         self.falses += 1
+    #         print('OZone error occured -- false results removed')
+    #         print('Till now {} errors have occured'.format(self.falses))
+    #         return True
+    #     return False
 
     # main function
-    def get_results(self, n_iter, rmse=False):
+    def get_results(self, n_iter, rmse):
 
         # randomize functions are out of this class, they are just recalled in CreateOZN.fire()
 
@@ -557,51 +587,53 @@ class Main:
 
                 # beam simulation
                 if not no_beam:
-                    self.single_sim(self.to_write, sim_no)
-                    self.details(sim_no)    # moving Ozone files named by simulation ID
+                    if not self.single_sim(self.to_write, sim_no):
+                        self.falses += 1
+                self.details(sim_no)    # moving Ozone files named by simulation ID
 
                 # column simulation
                 sim_no = '{}col'.format(sim_no)
                 print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
-                try:
-                    print(self.to_write)
-                    self.b2c()  # change coordinates to column
-                    self.single_sim(self.to_write, sim_no.split('a')[0])
-                    print(self.to_write)
-                    self.details(sim_no)    # saving column simulation details
+                # try:
+                self.b2c(sim_no[:10])  # change coordinates to column
+                if not self.single_sim(self.to_write, sim_no.split('a')[0]):
+                    self.falses += 1
+                self.details(sim_no)    # saving column simulation details
 
-                    # choosing worse scenario as single iteration output and checking its correctness
-                    if not no_beam:
-                        print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
-                        self.worse()
-                except:
-                    print('There is no column avilable or an error occured')
-                    pass
 
-                # check for error in results table, removing them and restarting OZone if necessary
-                try:
-                    if self.remove_false():
-                        if sim_no.count('a') > 3:
-                            print('Too many errors occured. Restarting OZone 3!')
-                            self.rs.close_ozn()
-                            time.sleep(1)
-                            self.rs.open_ozone()
-                        print("Step finished with severe error, restarting iteration.")
-                        sim_no = sim_no.split('col')[0] + 'a'
-                        continue
-                    else:
-                        print("Step finished OK")
-                        break
-                except IndexError:
-                    print("Step finished OK")
-                    break
+                # choosing worse scenario as single iteration output and checking its correctness
+                if not no_beam:
+                    print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
+                    self.worse()
+                # except:
+                #     print('There is no column avilable or an error occured')
+                #     pass
 
+                # # check for error in results table, removing them and restarting OZone if necessary
+                # try:
+                #     if self.remove_false():
+                #         if sim_no.count('a') > 3:
+                #             print('Too many errors occured. Restarting OZone 3!')
+                #             self.rs.close_ozn()
+                #             time.sleep(1)
+                #             self.rs.open_ozone()
+                #         print("Step finished with severe error, restarting iteration.")
+                #         sim_no = sim_no.split('col')[0] + 'a'
+                #         continue
+                #     else:
+                #         print("Step finished OK")
+                #         break
+                # except IndexError:
+                #     print("Step finished OK")
+                #     break
+                print("Step finished OK")
+                break
             # exporting results every (self.save_samp) repetitions
             if (sim + 1) % self.save_samp == 0:
                 e = Export(self.results, self.paths[1])
                 e.csv_write('stoch_rest')
                 # check if RMSE is low enough to stop simulation
-                if e.save(self.rset, self.t_crit, self.falses) and rmse:
+                if e.save(self.rset, self.t_crit, self.falses) and rmse == "rmse":
                     print('Multisimulation finished due to RMSE condition')
                     break
                 self.results.clear()
@@ -648,7 +680,6 @@ if __name__ == '__main__':
     # (8) hardware -- rate of delays (depends on hardware and sim complexity)
     # (9) stop -- multisimulation stops when RMSE <= 1e-3 or iterations limit ("rmse") or only iterations limit
     # ("whatever")
-
-    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=False)
+    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
 
 

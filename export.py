@@ -44,8 +44,8 @@ class Export:
                 i[j] = str(i[j])
             writelist.append(','.join(i) + '\n')
         if '{}.csv'.format(title) not in listdir('.'):
-            writelist.insert(0, ','.join(['ID', 't_max', 'time_crit', 'vent_num', 'vent_area', 'ceil_num', 'ceil_area',
-                                          'ext_num', 'ext_flow', 'fire_type', 'hrrpua', 'alpha', 'hrr_max', 'fire_r',
+            writelist.insert(0, ','.join(['ID', 't_max', 'time_crit', 'op_num', 'op_area', 'ceil_num', 'ceil_area',
+                                          'ext_num', 'ext_flow-in', 'ext_flow-out', 'fire_type', 'hrrpua', 'alpha', 'hrr_max', 'fire_r',
                                           'abs_x', 'abs_y', 'abs_z', 'rel_x', 'rel_y', 'rel_z', 'distance3D',
                                           'LCF_h', 'element', 'profile', 'shell\n']))
         with open('{}.csv'.format(title), 'a') as file:
@@ -56,6 +56,17 @@ class Export:
     def rmse(self, p, n):
         return (p * (1 - p) / n) ** 0.5
 
+    def uncertainity(self, save_list, p, n):
+
+        if save_list[-1][-4:-2] == "0." or save_list[-1][-4:-2] == "1.":
+            err = 3 / n
+            save_list.append('CI={}\n'.format(err))
+        else:
+            err = (p * (1 - p) / n) ** 0.5
+            save_list.append('RMSE={}\n'.format(err))
+
+        return err, save_list
+
     # creating summary file and charts based on stoch_res CSV database
     def save(self, rset, t_crit, errors):
         rset = int(rset)
@@ -63,37 +74,29 @@ class Export:
 
         data = rcsv('stoch_rest.csv', sep=',')
         num_nocoll = len(data.time_crit[data.time_crit == 0])
-        iter = len(data.t_max)
+        n_iter = len(data.t_max)
 
-        save_list = ["Results from {} iterations\n".format(iter)]
+        save_list = ["Results from {} iterations\n".format(n_iter)]
         err = [1, 1]    # actual uncertainty of calculation
 
-        # calculating and writing collapse probability and uncertainty to the list
-        p_coll = len(data.t_max[data.t_max < int(t_crit)]) / len(data.t_max)
-        save_list.append('P(collapse) = {}\n'.format(1 - p_coll))
-        if save_list[-1] == 0:
-            err[0] = 3 / iter
-            save_list.append('CI={}\n'.format(3/iter))
-        else:
-            err[0] = self.rmse(p_coll, iter)
-            save_list.append('RMSE={}\n'.format(self.rmse(p_coll, iter)))
+        # calculating and writing exceeding critical temperature probability and uncertainty to the list
+        try:
+            p_coll = len(data.t_max[data.t_max < int(t_crit)]) / len(data.t_max)
+            save_list.append('P(collapse) = {}\n'.format(1 - p_coll))
+        except ZeroDivisionError:
+            save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
+            p_coll = 0
+        err[0], save_list = self.uncertainity(save_list, p_coll, n_iter)
 
-        # calculating and writing unsuccessful evacuation probability and uncertainty to the list
+        # calculating and writing ASET<RSET probability and uncertainty to the list
         try:
             p_evac = (len(data.time_crit[data.time_crit <= int(rset)]) - num_nocoll) / (
                         len(data.time_crit) - num_nocoll)
             save_list.append('P(ASET < RSET) = {}\n'.format(p_evac))
-
-            if save_list[-1] == 0:
-                err[1] = 3 / iter
-                save_list.append('CI={}\n'.format(err[1]))
-            else:
-                err[1] = self.rmse(p_evac, iter)
-                save_list.append('RMSE={}\n'.format(err[1]))
-
         except ZeroDivisionError:
             save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
             p_evac = 0
+        err[1], save_list = self.uncertainity(save_list, p_evac, n_iter)
 
         save_list.append('{} OZone errors occured'.format(errors))
 
@@ -105,7 +108,6 @@ class Export:
         Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
 
         # check if uncertainty is low enough to stop calculations
-        print('RMSE_coll = {}\n RMSE_evac = {}'.format(*err))
         if 0 < err[0] < 0.001 and 0 < err[1] < 0.001:
             return True
         else:
@@ -122,5 +124,5 @@ if __name__ == '__main__':
             user = []
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
             Export([], user[1]).save(user[6], temp_crit(float(user[5])), 0)
-    except:
-        print('give USER file as an argument')
+    except IndexError:
+        print('Give me proper .USER file as an argument')

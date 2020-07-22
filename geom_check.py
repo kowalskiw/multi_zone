@@ -72,20 +72,26 @@ def xel():
     fig, ax = plt.subplots()
 
 
-# def ful():
-#     name = argv[1]
-#     with open('{}.ful'.format(name.split('.')[0])) as file:
-#         ful = rcsv(file)
-#     patches = []
-#     for i, r in ful.iterrows():
-#         patches.append(rect((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
-#     collection = PatchCollection(patches, alpha=0.8)
-#     ax.add_collection(collection)
-#
-#     plt.axis('equal')
-#     plt.tight_layout()
-#     plt.grid(True)
-#
-#     plt.show()
+def ful():
+    name = argv[1]
+    with open('{}.ful'.format(name.split('.')[0])) as file:
+        ful = rcsv(file)
+    patches = []
+    for i, r in ful.iterrows():
+        patches.append(rect((r[0], r[2]), r[1]-r[0], r[3]-r[2]))
+    collection = PatchCollection(patches, alpha=0.8)
+    ax.add_collection(collection)
 
-xel()
+    plt.axis('equal')
+    plt.tight_layout()
+    plt.grid(True)
+
+    plt.show()
+
+
+if argv[1][-4] == '.FUL':
+    ful()
+elif argv[1][-4] == '.XEL':
+    xel()
+else:
+    print('Wrong file extension. I can draw .FUL and .XEL files only!')
