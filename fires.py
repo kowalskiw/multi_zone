@@ -32,7 +32,7 @@ class Fires:
             probs.append(a/sum(ases))
 
         # return sampled fuel area
-        return random.choice(len(probs), p=probs)
+        return random.choice(len(probs), p=probs), ases
 
     def pool_fire(self, title, only_mass=False):
         with open('{}.ful'.format(title)) as file:

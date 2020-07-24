@@ -3,10 +3,9 @@ import json as js
 from pynput.keyboard import Key, Controller
 import time
 from sys import argv
-from numpy import sqrt, log, random, pi, array
+from numpy import sqrt, log, random, pi
 from export import Export
 from fires import Fires
-from shutil import move
 
 
 '''functions of CreateOZN class is related to another config file
@@ -659,14 +658,15 @@ def random_position(xes, yes, zes=(0, 1)):
     return fire
 
 
-if __name__ == '__main__':
+def open_user(user_file_pth):
     try:
-        with open(argv[1]) as file:
+        with open(user_file_pth) as file:
             user = []
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
             print(user)
     except IndexError:
         print("Give me USER file as an argument.")
+    return user
 
     # USER file consists of:
     # {0} ozone -- OZone program directory,
@@ -680,6 +680,10 @@ if __name__ == '__main__':
     # (8) hardware -- rate of delays (depends on hardware and sim complexity)
     # (9) stop -- multisimulation stops when RMSE <= 1e-3 or iterations limit ("rmse") or only iterations limit
     # ("whatever")
+
+
+if __name__ == '__main__':
+    user = open_user(argv[1])
     Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
 
 
