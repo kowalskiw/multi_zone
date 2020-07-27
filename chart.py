@@ -5,80 +5,69 @@ from os import chdir
 import pandas as pd
 import numpy as np
 
-'''set of charting functions for different purposes'''
-
 
 class Charting:
-    def __init__(self, res_path):
+    def __init__(self, res_path, t_crit, rset, probs):
         chdir(res_path)
         self.results = rcsv('stoch_rest.csv', sep=',')
-
-    # old chart -- not used at the moment
-    def distribution(self):
-        temp, time, foo = zip(*self.results[1:])
-        time_list = list(time)
-        probs = []
-        times = []
-        no_collapse = 0
-
-        # probability of no collapse scenario
-        if 0 in time_list:
-            no_collapse = time_list.count(0) / len(time_list)
-            while 0 in time_list:
-                time_list.remove(0)
-
-        # distribution of collapse times
-        n_sample = len(time_list)
-        while len(time_list) > 0:
-            i = time_list[0]
-            probs.append(time_list.count(i) / n_sample)
-            times.append(i)
-            while i in time_list:
-                time_list.remove(i)
-
-        print('P(no_collapse) = {}'.format(no_collapse))
-
-        fig, ax = plt.subplots()
-        ax.hist(times, density=True, cumulative=False, histtype='stepfilled')
-
-        plt.savefig('distr_wk')
-
-        return [[no_collapse], times, probs]
+        self.t_crit = t_crit
+        self.rset = rset
+        self.p_coll = probs[0]
+        self.p_evac = probs[1]
 
     # charts used for risk analysis
-    def ak_distr(self, t_crit, rset, p_coll, p_evac):
-        print(self.results)
 
+    def cdf(self, data, x_crit, y_crit, label, crit_lab):
+        sns_plot = sns.distplot(data, hist_kws={'cumulative': True},
+                                kde_kws={'cumulative': True, 'label': 'CDF'}, bins=20, axlabel=label)
+        plt.axvline(x=x_crit, color='r')
+        plt.axhline(y=y_crit, color='r')
+        plt.text(x_crit - 0.05 * (plt.axis()[1]-plt.axis()[0]), 0.2, crit_lab, rotation=90)
+
+    def pdf(self, data, x_crit, label, crit_lab):
+        sns_plot = sns.distplot(data, axlabel=label)
+        plt.axvline(x=x_crit, color='r')
+        plt.text(x_crit - 0.05 * (plt.axis()[1] - plt.axis()[0]), 0.2, crit_lab, rotation=90)
+
+    def dist(self, type='cdf'):
         try:
             plt.figure(figsize=(12, 4))
+
             plt.subplot(121)
-            sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
-                                    kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Temperature [°C]')
-            plt.axvline(x=t_crit, color='r')
-            plt.axhline(y=p_coll, color='r')
-            plt.text(t_crit-0.05*max(self.results.t_max), 0.2, 't_crit', rotation=90)
+            if type == 'cdf':
+                self.cdf(self.results.t_max, self.t_crit, self.p_coll, 'Temperature [°C]', r'$\theta_{a,cr}$')
+            elif type == 'pdf':
+                self.pdf(self.results.t_max, self.t_crit, 'Temperature [°C]', r'$\theta_{a,cr}$')
 
             plt.subplot(122)
-            print(p_coll)
-            sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0], hist_kws={'cumulative': True},
-                                    kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Time [s]')
-            plt.axvline(x=rset, color='r')
-            plt.axhline(y=p_evac, color='r')
-            plt.text(rset-0.05*max(self.results.time_crit[self.results.time_crit > 0]), 0.2, 'RSET', rotation=90)
+            if type == 'cdf':
+                self.cdf(self.results.time_crit[self.results.time_crit > 0], self.rset, self.p_evac, 'Time [s]', 'RSET')
+            elif type == 'pdf':
+                self.pdf(self.results.time_crit[self.results.time_crit > 0], self.rset, 'Time [s]', 'RSET')
+
         except:
             plt.figure(figsize=(6, 4))
-            sns_plot = sns.distplot(self.results.t_max, hist_kws={'cumulative': True},
-                                    kde_kws={'cumulative': True, 'label': 'CDF'}, axlabel='Temperature [°C]')
-        plt.savefig('dist_p.png')
+            if type == 'cdf':
+                self.cdf(self.results.t_max, self.t_crit, self.p_coll, 'Temperature [°C]', r'$\theta_{a,cr}$')
+            elif type == 'pdf':
+                self.pdf(self.results.t_max, self.t_crit, 'Temperature [°C]', r'$\theta_{a,cr}$')
 
-        plt.figure()
-        sns_plot = sns.distplot(self.results.time_crit[self.results.time_crit > 0],  axlabel='Czas [s]')
-        plt.axvline(x=rset, color='r')
-        plt.savefig('dist_d.png')
+        if type == 'cdf':
+            plt.savefig('dist_p.png')
+        elif type == 'pdf':
+            plt.savefig('dist_d.png')
+
+    def draw(self):
+        print(self.results)
+        self.dist(type='cdf')
+        self.dist(type='pdf')
+
+        return 0
 
 
 '''DrawOZone allows to create set of charts from OZone data
 use .PRI or .STT output file as an argument'''
+
 
 class DrawOZone:
     def __init__(self, file_paths):

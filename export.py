@@ -105,7 +105,7 @@ class Export:
 
         # draw charts
         print('temp_crit={}\nRSET={}'.format(t_crit, rset))
-        Charting(self.r_p).ak_distr(t_crit, rset, p_coll, p_evac)
+        Charting(self.r_p, t_crit, rset, (p_coll, p_evac)). draw()
 
         # check if uncertainty is low enough to stop calculations
         if 0 < err[0] < 0.001 and 0 < err[1] < 0.001:
