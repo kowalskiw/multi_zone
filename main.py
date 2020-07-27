@@ -663,7 +663,8 @@ def open_user(user_file_pth):
         with open(user_file_pth) as file:
             user = []
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
-            print(user)
+            error = "rmse" in user[9]
+            Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=error)
     except IndexError:
         print("Give me USER file as an argument.")
     return user
@@ -685,5 +686,4 @@ def open_user(user_file_pth):
 if __name__ == '__main__':
     user = open_user(argv[1])
     Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
-
 
