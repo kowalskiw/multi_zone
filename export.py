@@ -4,7 +4,6 @@ import sqlite3 as sql
 from pandas import read_csv as rcsv
 from chart import Charting
 from math import log
-from datetime import datetime as dt
 
 '''Save results in SQLite database
 develop or abandon'''
@@ -44,11 +43,11 @@ class SaveSQL:
 
 
 class Export:
-    def __init__(self, results, res_path):
-        self.ver = '0.1.0 ({})'.format(dt.fromtimestamp(path.getmtime('main.py')).strftime('%Y-%m-%d'))
+    def __init__(self, results, res_path, version):
         chdir(res_path)
         self.r_p = res_path
         self.res_tab = results
+        self.ver = version
 
     def csv_write(self, title):
         writelist = []
@@ -136,6 +135,6 @@ if __name__ == '__main__':
         with open(argv[1]) as file:
             user = []
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
-            Export([], user[1]).save(user[6], temp_crit(float(user[5])), 0)
+            Export([], user[1], '???').save(user[6], temp_crit(float(user[5])), 0)
     except IndexError:
         print('Give me proper .USER file as an argument')

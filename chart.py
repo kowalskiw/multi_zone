@@ -25,7 +25,7 @@ class Charting:
         plt.text(x_crit - 0.05 * (plt.axis()[1]-plt.axis()[0]), 0.2, crit_lab, rotation=90)
 
     def pdf(self, data, x_crit, label, crit_lab):
-        sns_plot = sns.distplot(data, axlabel=label)
+        sns_plot = sns.distplot(data, kde_kws={'label': 'PDF'}, axlabel=label)
         plt.axvline(x=x_crit, color='r')
         plt.text(x_crit - 0.05 * (plt.axis()[1] - plt.axis()[0]), 0.2, crit_lab, rotation=90)
 

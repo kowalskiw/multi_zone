@@ -4,6 +4,7 @@ from pynput.keyboard import Key, Controller
 import time
 from sys import argv
 from numpy import sqrt, log, random, pi
+from datetime import datetime as dt
 from export import Export
 from fires import Fires
 
@@ -297,15 +298,18 @@ class CreateOZN:
                     self.prof_type = prof
                 return d_prev
 
-            d_col = (999, 0)
-            prof = "HE HE"
+            d_col = [999, 0]
+            prof = 'HE HE'
             # iterate through all columns in all groups
             for group in elements['geom']['cols']:
                 if not group[1] < float(zf) < group[2]:    # check if column is not below the fire
-                    break
+                    continue
                 for col in group[3:]:
                     prof = elements['profiles'][group[0]]
                     d_col = nearestc(col, (xf, yf), d_col)
+
+            if prof == 'HE HE':
+                return AttributeError
 
             # check if shell does cover the most exposed point
             if shell - zf < 1.2:
@@ -393,7 +397,7 @@ class RunSim:
         self.keys.press(Key.enter)
         time.sleep(7 * self.hware_rate)
 
-        print('OZone3 alive')
+        print('OZone3 is alive')
 
     def close_ozn(self):
         popen('taskkill /im ozone.exe /f')  # killing ozone processes
@@ -429,22 +433,28 @@ class RunSim:
 
         print('analises has been run')
 
+    def new_analysis(self):
+        with self.keys.pressed(Key.ctrl):
+            self.keys.press('n')
+
 
 '''main class that contains main  loop and results operations'''
 
 
 class Main:
     def __init__(self, paths, rset, miu, fire_type, hware):
+        self.ver = '0.2.1 ({})'.format(dt.fromtimestamp(path.getmtime('main.py')).strftime('%Y-%m-%d'))
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
-        self.save_samp = 2
+        self.save_samp = 10
         self.sim_time = int(time.time())
         self.to_write = []
         self.rset = rset
         self.falses = 0
         self.f_type = fire_type
         self.rs = RunSim(*paths, hware)
+
 
     # import steel temperature table
     def add_data(self):
@@ -493,7 +503,7 @@ class Main:
 
     # single simulation handling
     def single_sim(self, export_list, sim_id):
-        for i in range(3):
+        for i in range(4):
             self.rs.run_simulation()
             time.sleep(1)
             try:
@@ -504,9 +514,11 @@ class Main:
 
             except FileNotFoundError:
                 print("An OZone error occured -- I've tried to rerun simulation ({})".format(i + 1))
-                self.rs.close_ozn()
-                time.sleep(1)
-                self.rs.open_ozone()
+                self.rs.new_analysis()
+                if i % 2 != 0:
+                    self.rs.close_ozn()
+                    time.sleep(1)
+                    self.rs.open_ozone()
 
         self.falses += 1
         print('Severe OZone error occured -- simulation passed and OZone restarted\n'
@@ -522,15 +534,17 @@ class Main:
         # change relative coords and element data to column
         # watch out for self.to_write's indexes here
         # when you set them improperly you will get "there is an error with profile not found (...)
-        xr, yr, zr, export = c.fire_place(*self.to_write[12:14], c.elements_dict(), zf=self.to_write[14]
-                                          , element='c')
+        try:
+            xr, yr, zr, export = c.fire_place(*self.to_write[12:14], c.elements_dict(), zf=self.to_write[14],
+                                              element='c')
+        except AttributeError:
+            return False
         col_to_write = self.to_write[:15] + [xr, yr, zr] + export
         self.to_write = col_to_write
 
         chdir(self.paths[1])
 
         # overwriting coordinates in OZN file
-        print(self.paths)
         with open('{}\details\{}.ozn'.format(self.paths[1], sim_no)) as file:
             ftab = file.readlines()
         ftab[302] = '{}\n'.format(zr)
@@ -547,25 +561,15 @@ class Main:
         if self.results[-1][1] > self.results[-2][1]:
             self.results.pop(-2)
         elif self.results[-1][1] == self.results[-2][1]:
-            if self.results[-1][1] < self.results[-2][1]:
+            if self.results[-1][0] < self.results[-2][0]:
                 self.results.pop(-2)
         else:
             self.results.pop(-1)
 
-    # # removing false results caused by OZone's "Loaded file" error
-    # def remove_false(self):
-    #     # check if time_crit and temp_crit are equal in both column and beam case
-    #     if self.results[-2][1:3] == self.results[-1][1:3]:
-    #         self.results.pop(-1)
-    #         self.results.pop(-2)
-    #         self.falses += 1
-    #         print('OZone error occured -- false results removed')
-    #         print('Till now {} errors have occured'.format(self.falses))
-    #         return True
-    #     return False
-
     # main function
     def get_results(self, n_iter, rmse):
+
+        print('v{}'.format(self.ver))
 
         # randomize functions are out of this class, they are just recalled in CreateOZN.fire()
 
@@ -575,61 +579,41 @@ class Main:
         # n_iter is maximum number of iterations
         for sim in range(int(n_iter)):
             sim_no = sim + self.sim_time  # unique simulation ID based on time mask
-            while True:
-                print('\n\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
 
-                # creating OZN file and writing essentials to the list
-                self.to_write.clear()
+            print('\n\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
 
-                # redirect data to CSV and create OZN file for beam
-                self.to_write, no_beam = CreateOZN(*self.paths, self.f_type).write_ozn()
+            # creating OZN file and writing essentials to the list
+            self.to_write.clear()
 
-                # beam simulation
-                if not no_beam:
-                    if not self.single_sim(self.to_write, sim_no):
-                        self.falses += 1
-                self.details(sim_no)    # moving Ozone files named by simulation ID
+            # redirect data to CSV and create OZN file for beam
+            self.to_write, no_beam = CreateOZN(*self.paths, self.f_type).write_ozn()
 
-                # column simulation
-                sim_no = '{}col'.format(sim_no)
-                print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
-                # try:
-                self.b2c(sim_no[:10])  # change coordinates to column
-                if not self.single_sim(self.to_write, sim_no.split('a')[0]):
+            # beam simulation
+            if not no_beam:
+                if not self.single_sim(self.to_write, sim_no):
                     self.falses += 1
-                self.details(sim_no)    # saving column simulation details
+            self.details(sim_no)    # moving Ozone files named by simulation ID
 
+            # column simulation
+            sim_no = '{}col'.format(sim_no)
+            print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
+            if self.b2c(sim_no[:10]):   # change coordinates to column
+                print('There is no column available')
+                no_beam = True
+            if not self.single_sim(self.to_write, sim_no.split('a')[0]):
+                self.falses += 1
+            self.details(sim_no)    # saving column simulation details
 
-                # choosing worse scenario as single iteration output and checking its correctness
-                if not no_beam:
-                    print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
-                    self.worse()
-                # except:
-                #     print('There is no column avilable or an error occured')
-                #     pass
+            # choosing worse scenario as single iteration output and checking its correctness
+            if not no_beam:
+                print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
+                self.worse()
 
-                # # check for error in results table, removing them and restarting OZone if necessary
-                # try:
-                #     if self.remove_false():
-                #         if sim_no.count('a') > 3:
-                #             print('Too many errors occured. Restarting OZone 3!')
-                #             self.rs.close_ozn()
-                #             time.sleep(1)
-                #             self.rs.open_ozone()
-                #         print("Step finished with severe error, restarting iteration.")
-                #         sim_no = sim_no.split('col')[0] + 'a'
-                #         continue
-                #     else:
-                #         print("Step finished OK")
-                #         break
-                # except IndexError:
-                #     print("Step finished OK")
-                #     break
-                print("Step finished OK")
-                break
+            print("Step finished OK")
+
             # exporting results every (self.save_samp) repetitions
             if (sim + 1) % self.save_samp == 0:
-                e = Export(self.results, self.paths[1])
+                e = Export(self.results, self.paths[1], self.ver)
                 e.csv_write('stoch_rest')
                 # check if RMSE is low enough to stop simulation
                 if e.save(self.rset, self.t_crit, self.falses) and rmse == "rmse":
@@ -662,9 +646,9 @@ def open_user(user_file_pth):
     try:
         with open(user_file_pth) as file:
             user = []
+
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
-            error = "rmse" in user[9]
-            Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=error)
+            # print(user)
     except IndexError:
         print("Give me USER file as an argument.")
     return user

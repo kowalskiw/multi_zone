@@ -202,7 +202,8 @@ class Fires:
     # curve taking sprinklers into account
     def sprink_noeff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = self.mc_rand(ffile)
+        fire_site, ases = self.mc_rand(ffile)
+
         config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)
