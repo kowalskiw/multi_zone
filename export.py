@@ -1,14 +1,16 @@
-from os import listdir, chdir
+from os import listdir, chdir, path, getcwd
 from sys import argv
 import sqlite3 as sql
 from pandas import read_csv as rcsv
 from chart import Charting
 from math import log
+from datetime import datetime as dt
 
-'''exporting results'''
+'''Save results in SQLite database
+develop or abandon'''
 
 
-class Export:
+class SaveSQL:
     def __init__(self, results, res_path):
         chdir(res_path)
         self.r_p = res_path
@@ -36,6 +38,17 @@ class Export:
         conn.execute("SELECT tbl_name FROM sqlite_master WHERE type = 'table'")
         # conn.execute("SELECT * FROM results_ozone")
         print(*conn.cursor().fetchall())
+
+
+'''Save output as summary results.txt and csv database. Run chart.Charting().'''
+
+
+class Export:
+    def __init__(self, results, res_path):
+        self.ver = '0.1.0 ({})'.format(dt.fromtimestamp(path.getmtime('main.py')).strftime('%Y-%m-%d'))
+        chdir(res_path)
+        self.r_p = res_path
+        self.res_tab = results
 
     def csv_write(self, title):
         writelist = []
@@ -76,7 +89,7 @@ class Export:
         num_nocoll = len(data.time_crit[data.time_crit == 0])
         n_iter = len(data.t_max)
 
-        save_list = ["Results from {} iterations\n".format(n_iter)]
+        save_list = ['v{}\n\nResults from {} iterations\n'.format(self.ver, n_iter)]
         err = [1, 1]    # actual uncertainty of calculation
 
         # calculating and writing exceeding critical temperature probability and uncertainty to the list
