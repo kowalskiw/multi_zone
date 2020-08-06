@@ -21,11 +21,30 @@ def power(base, power):
 def round_up(x, precision): return float(dec(str(x)).quantize(dec(str(precision)), rounding=r_up))
 
 
-def interpol(a, b, x): return (b[1] - a[1]) * x / (b[0] - a[0])
+# 1D linear interpolation between points 'a' and 'b' [t, f(t)] where (t = x) and (a[0] < x < b[0])
+def interpol(a, b, x): return (b[1] - a[1]) / (b[0] - a[0]) * (x - a[0]) + a[1]
 
 
-def arccos(x): return np.arccos(x) if 1 > x > -1 else 0
+def arccos(x):
+    if 1 >= x >= -1:
+        return np.arccos(x)
+    elif x > 1:
+        return np.arccos(1)
+    elif x < -1:
+        return np.arccos(-1)
 
+
+def point_rect(width, height, point):
+    dx = max(abs(point[0]) - width / 2, 0)
+    dy = max(abs(point[1]) - height / 2, 0)
+    return (dx * dx + dy * dy)**0.5
+
+
+def flame_temp(q_t, z_i, z_0, t_0):
+    temp = min(900., t_0 + 0.25 * power(0.8 * q_t, 2/3) * power(z_i - z_0, -5/3))   # Heskestad model {EN1991-1-2 an.C}
+    temp = 900 if temp < 0 else temp    # not found in any reference - just logical assumption
+
+    return temp
 
 # d_fire=float -- fire diameter in time step [m]
 # hrr=float -- heat release rate in time step [W]!!!
@@ -40,12 +59,12 @@ class LocalisedFire:
         self.diameter = d_fire
         self.qt = hrr
         self.ambient_t = ambient_t
-        self.solid_flame = self.flame()
         self.fire = np.array(fire)
         self.section = section
         self.ceiling = h_ceil
+        self.solid_flame = self.flame()
 
-    # modify fire coordinates X'Y' -->  X''Y''
+    # modifies fire coordinates X'Y' -->  X''Y''
     def fire_spot(self, face_no):
         f = 1 if face_no % 2 == 0 else 0    # take the other dimension
         add = self.section[f]/2
@@ -60,18 +79,23 @@ class LocalisedFire:
 
     # creates conical model of flame, returns list of isothermal surfaces (rings and cylinders)
     def flame(self):
-        ring_h = 0.1
-        height = -1.02 * self.diameter + 0.0148 * power(self.qt, 0.4)    # h_f [m] flame height
-        rings = []     # list of solid rings
-        for i in range(int(round_up(height/ring_h, 1))):
-            z_i = i * ring_h
-            r_i = 0.5 * self.diameter * (1-z_i/height)      # cylinder radius
+        ring_h = 0.1    # height of single cylinder [m]
+        flame_height = -1.02 * self.diameter + 0.0148 * power(self.qt, 0.4)    # flame height [m]
+        rings = []     # list of flame elements (cylinders)
+        # height of flame (truncated) cone beneath ceiling
+        h = flame_height if flame_height < self.ceiling else self.ceiling
 
-            z_virt = -1.02 * self.diameter + 0.00524 * power(self.qt, 0.4)
-            # cylinder and ring temperature
-            temp = min(900., self.ambient_t + 0.25 * (0.8 * power(self.qt, 2/3) * power(z_i - z_virt, -5/3)))
-            temp = 900. if temp < 0 else temp
-            rings.insert(0, [z_i, r_i, temp])
+        # building solid flame model (rings list)
+        for i in range(int(round_up(h / ring_h, 1))):
+            z_i = i * ring_h    # height on vertical axis of flame [m] (measurement point)
+            r_i = 0.5 * self.diameter * (1 - z_i / flame_height)      # cylinder radius [m]
+            z_virt = -1.02 * self.diameter + 0.00524 * power(self.qt, 0.4)  # virtual origin of fire [m]
+            temp = flame_temp(self.qt, z_i, z_virt, self.ambient_t)     # temperature of flame at z_i height [°C]
+
+
+
+            rings.append([z_i, r_i, temp])
+
         return rings
 
     # X''Y''
@@ -79,56 +103,68 @@ class LocalisedFire:
     # cyl=tuple(x_relative (r), y_relative (s), z_level(z_i), radius, temperature), face_z=float(z_j)
     def cylinder(self, cyl, face_no, face_z):
         x, s, z_i, r, temp = self.map_cylinder(face_no, cyl)
+
         if r < 0:
             return 0
 
-        def config_factor(s, x, y, r):
-            S = s/r
-            X = x/r
-            Y = y/r
-            H = 0.1/r
-            A = X**2 + Y**2
-            B = S**2 + X**2
-            C = (H-Y)**2
+        def config_factor(s, x, y, r, h):
+            # print(f'\ns: {round_up(s, 0.1)}')
+            # print(f'x: {round_up(x, 0.1)}')
+            # print(f'y: {round_up(y, 0.1)}')
+            # print(f'r: {round_up(r, 0.1)}')
+            # print(f'h: {round_up(h, 0.1)}\n')
+            S = abs(s/r)
+            X = abs(x/r)
+            Y = abs(y/r)
+            H = h/r     # always positive
+            A = X**2 + Y**2 +S**2     # always positive
+            B = S**2 + X**2     # always positive
+            C = (H-Y)**2     # positive or negative
 
-            # print('r', r)
-            # print('x:{} s:{}'.format(x, s))
-            # print(X, S)
-            # print('B: ', B)
-            # print('C: ', C)
-            # print('Y: ', Y)
-            # print('______________________________')
-            # if Y*Y +1 < B:
-            #     print('Y*Y +1 < B')
-            # else:
-            #     print('OK')
-            # if C+1 < B:
-            #     print('C+1 < B')
-            # else:
-            #     print('OK')
+            # # print('r', r)
+            # # print('x:{} s:{}'.format(x, s))
+            # # print(X, S)
+            # # print('B: ', B)
+            # # print('C: ', C)
+            # # print('Y: ', Y)
+            # # print('______________________________')
+            # if -1 > (Y*Y - B + 1)/(A - 1) > 1:
+            #     print('(Y*Y - B + 1)/(A - 1)')
+            # # else:
+            # #     print('OK')
+            # if -1 > (C - B + 1)/(C + B - 1) > 1:
+            #     print('(C - B + 1)/(C + B - 1) < 0')
+            # # else:
+            # #     print('OK')
             #
             # if A < 1:
             #     print('A < 1')
-            # else:
-            #     print('OK')
-            #
-            # print('______________________________')
+            # # else:
+            # #     print('OK')
+            # #
+            # # print('______________________________')
+
+
 
             # configuration factor F
-            F = S/B - S/(2*B*np.pi) * (arccos((Y**2-B+1)/(A-1)) + arccos((C-B+1)/(C+B-1)) -
+            F = S/B - S/(2*B*np.pi) * (arccos((Y**2 - B + 1) / (A - 1)) + arccos((C-B+1)/(C+B-1)) -
                                        Y * (((A+1)/((A-1)**2 + 4*Y**2)**0.5) * arccos((Y**2-B+1)/(B**0.5*(A-1)))) -
                                        C**0.5 * (((C+B+1)/((C+B-1)**2+4*C)**0.5) * arccos((C-B+1)/(B**0.5*(C+B-1)))) +
                                        H * arccos(B**-0.5))
             return F
 
         # based on rule of additivity
-        # !!!why sometimes F < 0!!!
+        y_i = h_i = abs(z_i - face_z)
+        y_i1 = h_i1 = abs(z_i + 0.1 - face_z)
         if z_i >= face_z:
-            F = config_factor(s, x, abs(z_i + 0.1 - face_z), r) - config_factor(s, x, abs(z_i - face_z), r)
+            F = config_factor(s, x, y_i1, r, h_i1) - config_factor(s, x, y_i, r, h_i)
         else:
-            F = config_factor(s, x, abs(z_i - face_z), r) - config_factor(s, x, abs(z_i + 0.1 - face_z), r)
+            F = config_factor(s, x, y_i, r, h_i) - config_factor(s, x, y_i1, r, h_i1)
 
-        print('F = {}'.format(F))
+        print('zi = ', round_up(z_i, 0.1), 'zf = ', face_z) if F < 0 else None
+        print('Fcyl = {}'.format(F)) if F < 0 else None
+        print('Fi = {}    Fi+1 = {}'.format(config_factor(s, x, y_i1, r, h_i1),
+                                            config_factor(s, x, y_i, r, h_i))) if F < 0 else None
         heat_flux = 5.67*10**(-8) * 0.7 * (cyl[2] + 273.15)**4 * F      # [W/m2]
 
         return heat_flux
@@ -139,8 +175,6 @@ class LocalisedFire:
         # X''Y''
         x_r, y_r = self.fire_spot(face_no)      # [m]
         z_i, r, temp = cylinder    # [m]
-
-        # self.draw_spot(x_r, y_r, r)
 
         # flame fully visible
         if not y_r < r:
@@ -154,21 +188,31 @@ class LocalisedFire:
     # angle between radiation direction and face should be taken into account
     def ring(self, ring, face_no, face_z, top=False):
         l, z_i, r1, r2, temp = self.map_ring(face_no, ring)
-        if not face_z > z_i:
-            return 0
-        h = face_z - z_i
+        h = face_z - z_i  # vertical distance between face and ring
 
+        # check if ring is in face's field of view and if ring
+        if h < 0 or r1 < 0 or r2 < 0:
+            print('none')
+            return 0
+
+        # calculate configuration factor 'infinitesimal plane -> ring'
+        # ref.: R. Sigel 'Thermal radiation heat transfer' 3rd edition, 1992
         H = h/l
         R1 = r1/l
         R2 = r2/l
 
-        def fr(r): return (H**2+r**2+1)/((H**2+r**2+1)**2-4*r**2)**0.5
+        # print(r1, r2)
+        def fr(r): return (H**2 + r**2 + 1) / ((H**2 + r**2 + 1)**2 - 4*r**2)**0.5
+        # print(fr(R1), fr(R2))
         F = H/2 * (fr(R2) - fr(R1))
+
         if top:
             F = H/2 * fr(R1)
 
-        heat_flux = 5.67 * 10 ** (-8) * 0.7 * power(temp + 273.15, 4) * F  # [W/m2]
+        # print(f'Fring = {F}')
 
+        heat_flux = 5.67 * 10 ** (-8) * 0.7 * power(temp + 273.15, 4) * F  # [W/m2]
+        # print(f'h_ring = {heat_flux}')
         return heat_flux
 
     # X'Y' -> X''Y''
@@ -185,11 +229,11 @@ class LocalisedFire:
 
         # X''Y''
         def modify_r(r):
-            if abs(y_r) < r:
+            if abs(y_r) < r:    # ring partially visible
                 return (r + y_r) / 2
-            elif -y_r > r:
-                return 0
-            return r
+            elif -y_r > r:  # ring not visible at all
+                return -1
+            return r    # ring fully visible
 
         [modify_r(r) for r in [r1, r2]]
 
@@ -202,20 +246,26 @@ class LocalisedFire:
         print('LOCAFI')
         sum_flux = 0
         face_flux = [0, 0, 0, 0]
+
+        # calculate flux for each face
         for face in range(4):
-            print(f'face no. {face}')
-            # set face properties
-            z_j = self.section[2]
-            # print('\n', '\n', face, '\n')
+            # print(f'face no. {face}')
+            z_j = self.section[2]       # face height (z_j in literature)
+
+            # calculate heat flux from each isothermal part of flame indicated on certain face
             for c in self.solid_flame:
                 i = self.solid_flame.index(c)
-                # check if element is not in flame
-                face_flux[face] += self.cylinder(c, face, z_j)
-                print('cyl no. {}'.format(i))
+                # print(f'cyl no. {i}')
+
+                # check if cylinder is visible (even partially)
+                if point_rect(*self.section[:2], self.fire) < c[1]:
+                    continue
+
+                face_flux[face] += self.cylinder(c, face, z_j)  # flux from  outer cylinder surface
                 if i > 0:
-                    face_flux[face] += self.ring(c, face, z_j)
+                    face_flux[face] += self.ring(c, face, z_j)  # flux from ring surface
                 if i == len(self.solid_flame):
-                    face_flux[face] += self.ring(c, face, z_j, top=True)
+                    face_flux[face] += self.ring(c, face, z_j, top=True)    # flux from top disk
 
             f = 0 if face % 2 == 0 else 1
             sum_flux += face_flux[face] * self.section[f]
@@ -253,23 +303,30 @@ class LocalisedFire:
     convective flux'''
     def heskestad(self):
         print('HESKESTAD')
-        z_i = self.section[2]   # height of measurment point on axis Z (vertical)
-        z_0 = -1.02 * self.diameter + 0.00524 * power(self.qt, 0.4)  #height of virtual fire source on axis Z (vertical)
+        z_i = self.section[2]   # height of measurement point along vertical axis
+        z_0 = -1.02 * self.diameter + 0.00524 * power(self.qt, 0.4)  # height of virtual fire source along vertical axis
+        h_conv = 35  # coefficient of heat transfer by convection for a natural fire [W/m2/K] {EN1991-1-2 3.3.1.1(3)}
+        emis = 1.0  # emissivity of fire [-] {EN1993-1-2 2.2(2)}
+        s_b = 5.67e-8  # Stefan-Boltzmann constant [W/m2/K4]
 
         # temperature of flame at z_i height
-        temp = min((900, self.ambient_t + 0.25 * (power(0.8 * self.qt, 2/3) * (z_i - z_0) ** -5/3)))
-        # temp = 900 if temp < 0 else temp
-        h_conv = 35     # h_{conv} [W/m2/K] coefficient of heat transfer by convection for a natural fire
+        print(f'z_0 = {z_0}')
+        temp = flame_temp(self.qt, z_i, z_0, self.ambient_t)
 
-        heat_flux = 5.67*10**(-8) * 0.7 * (temp + 273.15)**4 + h_conv * temp
+        print(f'TEMPERATURE < 0  {temp}') if temp < 0 else None
+
+        heat_flux = s_b * emis * power(temp + 273.15, 4) + h_conv * temp
+
+        print(f'temp = {temp}   h_flux = {heat_flux}')
 
         return heat_flux
 
     # calculation of heat flux received by section in certain time step based on proper fire model
     def flux(self, fire=False, smoke=False):
         # check if element in fire_area or not
-        if np.linalg.norm(self.fire - self.section[:-1]) < self.diameter:
+        if point_rect(self.section[0], self.section[1], self.fire) < self.diameter/2:
             fire = True
+
         # check if element in smoke layer or not
         h_layer = self.ceiling - 0.5
         if h_layer < self.section[2]:
@@ -306,32 +363,45 @@ class SteelTemp:
             self.T0 = self.ambient
         self.massivity = massiv
 
+    # specific heat of carbon steel according to its temperature {EN1993-1-2 3.4.1.2}
+    def spec_heat(self, temp):
+        if temp < 600:
+            return 425 + .773 * temp - 0.00169 * temp**2 + 2.22 * 10**(-6) * temp**3
+        elif temp < 735:
+            return 666 + 13002 / (738 - temp)
+        elif temp < 900:
+            return 545 + 17820 / (temp - 731)
+        elif temp <= 1200:
+            return 650
+        else:
+            raise ValueError(f'Steel temperature {temp} exceeds 1200°C - unable to calculate specific heat value.')
+
     def calculate(self):
-        rho = 1200      # steel density [kg/m3]
-        C_p = 1000      # steel specific heat [J/kg/K]
-        h_conv = 35     # coefficient of heat transfer by convection for a natural fire [W/m2/K]
+        rho = 7850      # steel density [kg/m3] {EN1991-1-2 3.2.2(1)}
+        C_p = self.spec_heat(self.T0)      # steel specific heat [J/kg/K]
+        h_conv = 4#35     # coefficient of heat transfer by convection for a natural fire [W/m2/K] {EN1991-1-2 3.3.1.1(3)}
         emis = 0.7      # emissivity of steel (0.7 according to EN 1991-1-2) [-]
         s_b = 5.67*10**(-8)    # Stefan-Boltzmann constant [W/m2/K4]
 
-        #type problem
-        print(self.massivity)
-        T1 = self.T0 + self.step * self.massivity * 1 / (rho * C_p * self.T0) * \
-            (self.h_f + h_conv * (self.ambient - self.T0) + emis*(s_b * ((273 + self.ambient)**4 - (self.T0 + 273)**4)))
-
+        print(f'heat flux:  {self.h_f}')
+        # type problem
+        T1 = self.T0 + self.step * self.massivity * 1 / (rho * C_p) * \
+            (self.h_f + h_conv * (self.ambient - self.T0) +
+             emis * s_b * (power(self.ambient + 273, 4) - power(self.T0 + 273, 4)))
         return T1
 
 
-'''Time step calculations of steel temperature'''
+'''Test time step calculations of steel temperature'''
 
 
 class Singularity:
     def __init__(self):
-        self.steps = range(1200)
+        self.steps = range(1200)[1:]
         self.hrr = []
         for t in range(0, 1201, 10):
-            self.hrr.append((t, 100*t*t))
-        self.hrrpua = 5000000  # W/m2
-        self.fire = (3, 3)
+            self.hrr.append((t, min(50e6, 188*t*t)))
+        self.hrrpua = 1000e3 # W/m2
+        self.fire = (0, 0)
         self.section, self.massiv = self.profile()
         self.z_j = 2
         self.h_ceil = 5
@@ -341,9 +411,9 @@ class Singularity:
         pass
 
     def profile(self):
-        # find massivity Am/V [m-1]
+        # find massivity Am/V [m-1]!
         box = (0.02, 0.02)
-        massiv = 1.6
+        massiv = 167
         return box, massiv
 
     def draw(self, data):
@@ -353,21 +423,24 @@ class Singularity:
 
     def main(self):
         steel = []
-        print(self.hrr)
+        # print(self.hrr)
         for t in self.steps:
             # find hrr at 't' moment
-            print('\n===========\n{} second of simulation\n_______________'.format(t+1))
+            print('\n===========\n{} second of simulation\n_______________'.format(t))
             for j in range(len(self.hrr)):
                 if t == self.hrr[j][0]:
                     hrr = self.hrr[j][1]
+                    break
                 elif t < self.hrr[j][0]:
-                    hrr = interpol(self.hrr[j-1], self.hrr[j], t)
+                    hrr = interpol(self.hrr[j-2], self.hrr[j-1], t)
+                    break
             d = 2 * (hrr/self.hrrpua/np.pi) ** 0.5
-            print(d, hrr)
-            flux = LocalisedFire(d, hrr, self.fire, (*self.section, self.z_j), self.h_ceil-0.5).flux()
+            flux = LocalisedFire(d, hrr, self.fire, (*self.section, self.z_j), self.h_ceil).flux()
+            flux = 100000 if flux > 100000 else flux
             if len(steel) == 0:
                 steel.append(SteelTemp(flux, self.massiv).calculate())
             else:
+                print(steel)
                 steel.append(SteelTemp(flux, self.massiv, temp=steel[-1]).calculate())
 
         self.draw(steel)
@@ -375,8 +448,17 @@ class Singularity:
         return steel
 
 
+def test_main():
+    lf = LocalisedFire(5, 25000000, (2, 2), (0.1, 0.2, 1.2), 5)
+    print(r'flux = {} W/m^2'.format(round_up(lf.flux(), 1)))
+
+
 if __name__ == '__main__':
     start = tm()
     print(Singularity().main())
     end = tm()
     print('Performance time: {}'.format(end-start))
+
+
+# test_main()
+
