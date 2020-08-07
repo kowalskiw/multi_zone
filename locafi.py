@@ -294,27 +294,25 @@ class LocalisedFire:
         print('HASEMI')
 
         def hrr_x(a):
-            return self.qt / 1110000 / a ** 2.5
+            return self.qt / 1.11e6 / power(a, 2.5)
 
         Q_h = hrr_x(self.ceiling)
-        L_h = self.ceiling * (2.9 * Q_h ** 0.33 - 1)
+        L_h = self.ceiling * (2.9 * power(Q_h, 0.33) - 1)
         Q_d = hrr_x(self.diameter)
         if Q_d < 1:
-            z_virt = 2.4 * self.diameter * (Q_d ** 0.4 - Q_d ** (2 / 3))
+            z_virt = 2.4 * self.diameter * (power(Q_d, 2/5) - power(Q_d, 2 / 3))
         else:
-            z_virt = 2.4 * self.diameter * (1 - Q_d ** 0.4)
+            z_virt = 2.4 * self.diameter * (1 - power(Q_d, 2/5))        # locafi: 2/5 (seems proper); EC: 2/3
         d = (self.fire[0] ** 2 + self.fire[1] ** 2) ** 0.5
-
         y = (d + self.ceiling + z_virt) / (L_h + self.ceiling + z_virt)
 
-        if not y > 0.3:
-            heat_flux = 100000
+        if y <= 0.3:
+            return 100e3
         elif y < 1:
-            heat_flux = 136300 - 121000 * y
+            return 136300 - 121000 * y
         else:
-            heat_flux = 150000 * y ** (-3.7)
+            return 15e3 * power(y, -3.7)
 
-        return heat_flux
 
     '''HESKESTAD  model
     element inside fire area and outside smoke layer
@@ -329,15 +327,15 @@ class LocalisedFire:
         s_b = 5.67e-8  # Stefan-Boltzmann constant [W/m2/K4]
 
         # temperature of flame at z_i height
-        print(f'hrr = {self.qt}')
-        print(f'z_0 = {z_0}')
+        # print(f'hrr = {self.qt}')
+        # print(f'z_0 = {z_0}')
         temp = flame_temp(self.qt, z_i, z_0, self.ambient_t)
 
-        print(f'TEMPERATURE < 0  {temp}') if temp < 0 else None
+        # print(f'TEMPERATURE < 0  {temp}') if temp < 0 else None
 
         heat_flux = s_b * emis * power(temp + 273.15, 4) + h_conv * temp
 
-        print(f'temp = {temp}   h_flux = {heat_flux}')
+        # print(f'temp = {temp}   h_flux = {heat_flux}')
 
         return heat_flux
 
@@ -351,7 +349,6 @@ class LocalisedFire:
         h_layer = self.ceiling - 0.5
         if h_layer < self.section[2]:
             smoke = True
-
         print('inside fire area: {}  inside smoke layer: {}'.format(fire, smoke))
         if fire and smoke:
             return min(self.hasemi(), self.heskestad())  # why min???
@@ -395,7 +392,7 @@ class SteelTemp:
         emis = 0.7  # emissivity of steel (0.7 according to EN 1991-1-2) [-]
         s_b = 5.67 * 10 ** (-8)  # Stefan-Boltzmann constant [W/m2/K4]
 
-        print(f'heat flux:  {self.h_f}')
+        # print(f'heat flux:  {self.h_f}')
         # type problem
         T1 = self.T0 + self.step * self.massivity * 1 / (rho * C_p) * \
              (self.h_f + h_conv * (self.ambient - self.T0) +
@@ -418,28 +415,31 @@ def draw(data):
 
 
 class FreeOn:
+    # set only default values
     def __init__(self):
-        self.steps = range(1000)
+        self.steps = range(1000)[1:]
         self.hrr = []
         for t in range(0, 1001, 10):
             self.hrr.append((t, min(50e6, 188 * t * t)))
         self.hrrpua = 1000e3  # W/m2
-        self.fire = (1, 0)
+        self.fire = (2, 2)
         self.section, self.massive = self.profile()
         self.z_j = 2
         self.h_ceil = 5
         self.prof = 'HEA 120'
 
+    # develop
     def read_from_config(self):
         pass
 
+    # develop
     def profile(self):
         # find factor Am/V [m-1]!
         box = (0.02, 0.02)
         massive = 167
         return box, massive
 
-    def main(self):
+    def main(self, chart=False):
         hrr = 0
         steel = []
         flux_ = []
@@ -456,7 +456,8 @@ class FreeOn:
                     break
             d = 2 * (hrr / self.hrrpua / np.pi) ** 0.5
             flux = LocalisedFire(d, hrr, self.fire, (*self.section, self.z_j), self.h_ceil).flux()
-            flux = 100000 if flux > 100000 else flux
+            flux = 100e3 if flux > 100e3 else flux    # limit flux to 100kW/m2 (why? maybe matter of validity)
+            print(f'heat_flux = {flux} W/m2')
             flux_.append(flux)
             if len(steel) == 0:
                 steel.append(SteelTemp(flux, self.massive).calculate())
@@ -465,7 +466,7 @@ class FreeOn:
                 steel.append(SteelTemp(flux, self.massive, temp=steel[-1]).calculate())
 
         # hrr_data, foo = zip(self.hrr)
-        draw([steel, flux_])
+        draw([steel, flux_]) if chart else None
 
         return steel
 
@@ -477,7 +478,7 @@ def test_main():
 
 if __name__ == '__main__':
     start = tm()
-    print(FreeOn().main())
+    print(FreeOn().main(chart=True))
     end = tm()
     print('Performance time: {}'.format(end - start))
 
