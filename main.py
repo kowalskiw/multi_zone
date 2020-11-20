@@ -3,11 +3,13 @@ import json as js
 from pynput.keyboard import Key, Controller
 import time
 from sys import argv
+import numpy as np
 from numpy import sqrt, log, random, pi
 from datetime import datetime as dt
 from export import Export
 from fires import Fires
-
+import ezdxf
+import shapely.geometry as sh
 
 '''functions of CreateOZN class is related to another config file
 CreateOZN class prepares input file (.ozn) for every single simulation'''
@@ -62,6 +64,27 @@ class CreateOZN:
         with open(self.title + '.xel', 'r') as file:
             construction = dict(js.load(file))
         return construction
+
+    # reading construction geometry from DXF file and add them to a list
+    def elements_dxf(self):
+        dxffile = ezdxf.readfile('{}.dxf'.format(self.title))
+        msp = dxffile.modelspace()
+        lines = []
+        [lines.append(l) for l in msp.query('LINE')]
+
+        shells = []
+        [shells.append(s) for s in msp.query('3DFACE')]
+
+        return lines, self.dxf_to_shapely(shells)
+
+    def dxf_to_shapely(self, dxfshells):
+        shshells = {}
+
+        for s in dxfshells:
+            shshell = sh.Polygon([s[0], s[1], s[2], s[3]])
+            shshells[str(s[0][-1])] = shshell
+
+        return shshells
 
     # compartment materials section
     def material(self):
@@ -323,6 +346,75 @@ class CreateOZN:
             # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
             return (*d_col, [distance, shell-zf, 'v', self.prof_type, shell])
 
+    def dxf_mapping(self, fire_x, fire_y, element='b', fire_z=0):
+        lines, shells = self.elements_dxf()  # shells -> dict{Z_level:Plygon} | lines
+        fire = sh.Point([fire_x, fire_y, fire_z])  # shapely does not support the 3D objects - z coordinate is not used
+        shell_lvl = 1e6
+
+        def map_lines():
+            d = 1e9
+            index = None
+            fire_relative = None
+
+            # returns vectors to further calculations (line_start[0], line_end[1], fire[2], es[3], fs[4], fe[5], se[6])
+            def vectors(line):
+                l_start = np.array(line.dxf.start)
+                l_end = np.array(line.dxf.end)
+                fire = np.array((fire_x, fire_y, fire_z))
+
+                return l_start, l_end, fire, l_end - l_start, fire - l_start, fire - l_end, l_start - l_end
+
+            for l in lines:
+                v = vectors(l)
+
+                # check if orthogonal projection is possible, choose the nearest edge if not
+                def cos_vec(v1, v2): return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+                if cos_vec(v[3], v[4]) >= 0 and cos_vec(v[6], v[5]) >= 0:
+                    d_iter = np.linalg.norm(np.cross(v[3], v[4])) / np.linalg.norm(v[3])
+                else:
+                    d_iter = min([np.linalg.norm(v[2] - v[0]), (np.linalg.norm(v[2] - v[0]))])
+
+                # check if line is closer then already chosen
+                if d_iter < d:
+                    d = d_iter
+                    index = lines.index(l)
+
+            v = vectors(lines[index])
+            section = v[0] + (np.dot(v[4], v[3]) / np.dot(v[3], v[3])) * v[3]
+            print(section)
+
+            # lift column's section to the biggest heat flux height (1.2m from fire base)
+            if element == 'c':
+                if section[-1] + 1.2 < max([v[1][-1], v[0][-1]]):
+                    section += [0, 0, 1.2]
+                else:
+                    section[-1] = max([v[1][-1], v[0][-1]])
+
+            fire_relative = section - fire
+
+            # check the profile and add to return
+            return fire_relative, d, shell_lvl, lines[index].dxf.layer
+
+        # check for shell (plate, ceiling) above the fire
+        for lvl, poly in shells.items():
+            lvl = float(lvl)
+            if float(fire_z) <= lvl < shell_lvl and poly.contains(fire):
+                shell_lvl = lvl
+        # set shell_lvl as -1 when there is no plate above the fire (besides compartment ceiling)
+        if shell_lvl == 1e6:
+            shell_lvl = -1
+
+        if element == 'b':
+            # here you should cut lines table to beams only
+            mapped = map_lines()
+
+        elif element == 'c':
+            # here you should cut lines table to columns only
+            mapped = map_lines()
+
+        # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
+        return (*mapped[0], [mapped[1], mapped[2] - fire_z, element, mapped[3], mapped[2]])
+
     # raw OZone strategy section
     def strategy(self):
         with open(self.title + '.str', 'r') as file:
@@ -454,7 +546,6 @@ class Main:
         self.falses = 0
         self.f_type = fire_type
         self.rs = RunSim(*paths, hware)
-
 
     # import steel temperature table
     def add_data(self):
@@ -667,7 +758,7 @@ def open_user(user_file_pth):
     # ("whatever")
 
 
-if __name__ == '__main__':
-    user = open_user(argv[1])
-    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
+# if __name__ == '__main__':
+    # user = open_user(argv[1])
+    # Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
 
