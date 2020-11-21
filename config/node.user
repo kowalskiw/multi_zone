@@ -5,6 +5,6 @@ task -- example
 fire -- sprink-noeff_store
 miu -- 0.7
 RSET -- 300
-max_iterations -- 200
+max_iterations -- 10
 hardware -- 1.2
 stop -- rmse

@@ -59,23 +59,30 @@ class CreateOZN:
 
         return geom_tab[:6]
 
+    # REPLACED with dxf functions
     # reading steel construction geometry
-    def elements_dict(self):
-        with open(self.title + '.xel', 'r') as file:
-            construction = dict(js.load(file))
-        return construction
+    # def elements_dict(self):
+    #     with open(self.title + '.xel', 'r') as file:
+    #         construction = dict(js.load(file))
+    #     return construction
 
     # reading construction geometry from DXF file and add them to a list
     def elements_dxf(self):
         dxffile = ezdxf.readfile('{}.dxf'.format(self.title))
         msp = dxffile.modelspace()
-        lines = []
-        [lines.append(l) for l in msp.query('LINE')]
+        columns = []
+        beams = []
+        for l in msp.query('LINE'):
+            if l.dxf.start[:-1] == l.dxf.end[:-1]:
+                columns.append(l)
+            else:
+                beams.append(l)
+
 
         shells = []
         [shells.append(s) for s in msp.query('3DFACE')]
 
-        return lines, self.dxf_to_shapely(shells)
+        return beams, columns, self.dxf_to_shapely(shells)
 
     def dxf_to_shapely(self, dxfshells):
         shshells = {}
@@ -227,7 +234,8 @@ class CreateOZN:
         tab_new.insert(0, '{}\n'.format(fuel_z[1] - zf))  # height of fuel above the fire base
 
         # overwriting absolute coordinates with relative ones (fire-element)
-        xr, yr, zr, export = self.fire_place(xf, yf, self.elements_dict(), zf=zf, element='b')
+        # xr, yr, zr, export = self.fire_place(xf, yf, self.elements_dict(), zf=zf, element='b')
+        xr, yr, zr, export = self.dxf_mapping(xf, yf, element='b', fire_z=zf)
         if export[4] > 0:  # save ceiling height for LOCAFI from GEOM config file or shell height
             tab_new.insert(2, '{}\n'.format(export[4]))
         else:
@@ -243,118 +251,119 @@ class CreateOZN:
 
         return tab_new
 
+    # REPLACED with dxf functions
     # mapping 3D structure to find the most exposed element
-    def fire_place(self, xf, yf, elements, element='b', zf=0):
-
-        # check if there is any shell above the fire
-        shell = -1
-        try:
-            for sh in sorted(elements['geom']['shell']):
-                if float(sh) >= float(zf):
-                    shell = float(sh)
-                    break
-        except KeyError:
-            'There is no shell'
-
-        # beams mapping
-        if element == 'b':
-            above_lvl = 0
-
-            # check if beams lie between fire and shell level
-            for lvl in elements['geom']['beams']:
-                if float(lvl) > zf:
-                    above_lvl = float(lvl)
-                    break
-            if above_lvl == 0:
-                print('There is no beam available - fire ({}m) above beams ({})m'.format(zf, above_lvl))
-                self.no_beam = True
-            if above_lvl > shell > 0:
-                print('There is no beam available - beams ({}m) covered by shell ({}m)'.format(above_lvl, shell))
-                self.no_beam = True
-            else:
-                print('Analised beam level: {}m'.format(above_lvl))
-
-            # finding nearest beam; iterating through all beams at above_level
-            def nearestb(axis_str, af, bf):
-                deltas = [999, 0]
-                for beam in elements['geom']['beams'][str(above_lvl)][axis_str]:
-                    if beam[2] <= bf <= beam[3]:
-                        dista = af - beam[1]
-                        distb = 0
-                    else:
-                        dista = af - beam[1]
-                        distb = bf - max(beam[2], beam[3])
-                    # overwrite if closer to fire
-                    if (dista ** 2 + distb ** 2) ** 0.5 < (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5:
-                        deltas = [dista, distb]
-                        self.prof_type = elements['profiles'][int(beam[0])]
-
-                return deltas, (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5
-
-            nearest_x = tuple(nearestb('X', xf, yf))
-            nearest_y = tuple(nearestb('Y', xf, yf))
-
-            # check weather X or Y beam is closer to the fire and writing relative coordinates of the closer one
-            if nearest_x[1] < nearest_y[1]:
-                d_beam = (*nearest_x[0], above_lvl - zf)
-                distance = (nearest_x[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
-            else:
-
-                d_beam = (*nearest_y[0], above_lvl - zf)
-                distance = (nearest_y[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
-
-            print(self.prof_type)
-
-            # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
-            return (*d_beam, [distance, shell-zf, 'h', self.prof_type, shell])
-
-        # columns mapping
-        elif element == 'c':
-            # finding nearest column
-            def nearestc(col_pos, fire_pos, d_prev):
-                distx = fire_pos[0] - col_pos[0]
-                disty = fire_pos[1] - col_pos[1]
-                # compare distance of certain column with the nearest so far
-                if (distx ** 2 + disty ** 2) ** 0.5 < (d_prev[0] ** 2 + d_prev[1] ** 2) ** 0.5:
-                    d_prev = [distx, disty]
-
-                    self.prof_type = prof
-                return d_prev
-
-            d_col = [999, 0]
-            prof = 'HE HE'
-            # iterate through all columns in all groups
-            for group in elements['geom']['cols']:
-                if not group[1] < float(zf) < group[2]:    # check if column is not below the fire
-                    continue
-                for col in group[3:]:
-                    prof = elements['profiles'][group[0]]
-                    d_col = nearestc(col, (xf, yf), d_col)
-
-            if prof == 'HE HE':
-                return AttributeError
-
-            # check if shell does cover the most exposed point
-            if shell - zf < 1.2:
-                d_col.append(shell - zf)
-            else:
-                d_col.append(1.2)
-
-            distance = (d_col[0] ** 2 + d_col[1] ** 2 + d_col[2]**2) ** 0.5    # fire--element 3D distance
-            print(self.prof_type)
-
-            # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
-            return (*d_col, [distance, shell-zf, 'v', self.prof_type, shell])
+    # def fire_place(self, xf, yf, elements, element='b', zf=0):
+    #
+    #     # check if there is any shell above the fire
+    #     shell = -1
+    #     try:
+    #         for sh in sorted(elements['geom']['shell']):
+    #             if float(sh) >= float(zf):
+    #                 shell = float(sh)
+    #                 break
+    #     except KeyError:
+    #         'There is no shell'
+    #
+    #     # beams mapping
+    #     if element == 'b':
+    #         above_lvl = 0
+    #
+    #         # check if beams lie between fire and shell level
+    #         for lvl in elements['geom']['beams']:
+    #             if float(lvl) > zf:
+    #                 above_lvl = float(lvl)
+    #                 break
+    #         if above_lvl == 0:
+    #             print('There is no beam available - fire ({}m) above beams ({})m'.format(zf, above_lvl))
+    #             self.no_beam = True
+    #         if above_lvl > shell > 0:
+    #             print('There is no beam available - beams ({}m) covered by shell ({}m)'.format(above_lvl, shell))
+    #             self.no_beam = True
+    #         else:
+    #             print('Analised beam level: {}m'.format(above_lvl))
+    #
+    #         # finding nearest beam; iterating through all beams at above_level
+    #         def nearestb(axis_str, af, bf):
+    #             deltas = [999, 0]
+    #             for beam in elements['geom']['beams'][str(above_lvl)][axis_str]:
+    #                 if beam[2] <= bf <= beam[3]:
+    #                     dista = af - beam[1]
+    #                     distb = 0
+    #                 else:
+    #                     dista = af - beam[1]
+    #                     distb = bf - max(beam[2], beam[3])
+    #                 # overwrite if closer to fire
+    #                 if (dista ** 2 + distb ** 2) ** 0.5 < (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5:
+    #                     deltas = [dista, distb]
+    #                     self.prof_type = elements['profiles'][int(beam[0])]
+    #
+    #             return deltas, (deltas[0] ** 2 + deltas[1] ** 2) ** 0.5
+    #
+    #         nearest_x = tuple(nearestb('X', xf, yf))
+    #         nearest_y = tuple(nearestb('Y', xf, yf))
+    #
+    #         # check weather X or Y beam is closer to the fire and writing relative coordinates of the closer one
+    #         if nearest_x[1] < nearest_y[1]:
+    #             d_beam = (*nearest_x[0], above_lvl - zf)
+    #             distance = (nearest_x[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
+    #         else:
+    #
+    #             d_beam = (*nearest_y[0], above_lvl - zf)
+    #             distance = (nearest_y[1]**2 + d_beam[-1]**2) ** 0.5  # fire--element 3D distance
+    #
+    #         print(self.prof_type)
+    #
+    #         # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
+    #         return (*d_beam, [distance, shell-zf, 'h', self.prof_type, shell])
+    #
+    #     # columns mapping
+    #     elif element == 'c':
+    #         # finding nearest column
+    #         def nearestc(col_pos, fire_pos, d_prev):
+    #             distx = fire_pos[0] - col_pos[0]
+    #             disty = fire_pos[1] - col_pos[1]
+    #             # compare distance of certain column with the nearest so far
+    #             if (distx ** 2 + disty ** 2) ** 0.5 < (d_prev[0] ** 2 + d_prev[1] ** 2) ** 0.5:
+    #                 d_prev = [distx, disty]
+    #
+    #                 self.prof_type = prof
+    #             return d_prev
+    #
+    #         d_col = [999, 0]
+    #         prof = 'HE HE'
+    #         # iterate through all columns in all groups
+    #         for group in elements['geom']['cols']:
+    #             if not group[1] < float(zf) < group[2]:    # check if column is not below the fire
+    #                 continue
+    #             for col in group[3:]:
+    #                 prof = elements['profiles'][group[0]]
+    #                 d_col = nearestc(col, (xf, yf), d_col)
+    #
+    #         if prof == 'HE HE':
+    #             return AttributeError
+    #
+    #         # check if shell does cover the most exposed point
+    #         if shell - zf < 1.2:
+    #             d_col.append(shell - zf)
+    #         else:
+    #             d_col.append(1.2)
+    #
+    #         distance = (d_col[0] ** 2 + d_col[1] ** 2 + d_col[2]**2) ** 0.5    # fire--element 3D distance
+    #         print(self.prof_type)
+    #
+    #         # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
+    #         return (*d_col, [distance, shell-zf, 'v', self.prof_type, shell])
 
     def dxf_mapping(self, fire_x, fire_y, element='b', fire_z=0):
-        lines, shells = self.elements_dxf()  # shells -> dict{Z_level:Plygon} | lines
+        print(fire_x, fire_y, fire_z, 'maja byc bezwzgledne, ttakie same')
+        beams, columns, shells = self.elements_dxf()  # shells -> dict{Z_level:Plygon} | lines
         fire = sh.Point([fire_x, fire_y, fire_z])  # shapely does not support the 3D objects - z coordinate is not used
         shell_lvl = 1e6
 
-        def map_lines():
+        def map_lines(lines):
             d = 1e9
             index = None
-            fire_relative = None
 
             # returns vectors to further calculations (line_start[0], line_end[1], fire[2], es[3], fs[4], fe[5], se[6])
             def vectors(line):
@@ -391,7 +400,6 @@ class CreateOZN:
                     section[-1] = max([v[1][-1], v[0][-1]])
 
             fire_relative = section - fire
-
             # check the profile and add to return
             return fire_relative, d, shell_lvl, lines[index].dxf.layer
 
@@ -406,11 +414,13 @@ class CreateOZN:
 
         if element == 'b':
             # here you should cut lines table to beams only
-            mapped = map_lines()
+            mapped = map_lines(beams)
 
         elif element == 'c':
             # here you should cut lines table to columns only
-            mapped = map_lines()
+            mapped = map_lines(columns)
+
+        self.prof_type = mapped[3]
 
         # returns tuple (x_r, y_r, z_r, [distance3D, LOCAFI_h, 'h', profile, shell height])
         return (*mapped[0], [mapped[1], mapped[2] - fire_z, element, mapped[3], mapped[2]])
@@ -626,8 +636,7 @@ class Main:
         # watch out for self.to_write's indexes here
         # when you set them improperly you will get "there is an error with profile not found (...)
         try:
-            xr, yr, zr, export = c.fire_place(*self.to_write[12:14], c.elements_dict(), zf=self.to_write[14],
-                                              element='c')
+            xr, yr, zr, export = c.dxf_mapping(*self.to_write[12:14], fire_z=self.to_write[14], element='c')
         except AttributeError:
             return False
         col_to_write = self.to_write[:15] + [xr, yr, zr] + export
@@ -649,11 +658,16 @@ class Main:
 
     # choosing worse scenario
     def worse(self):
-        if self.results[-1][1] > self.results[-2][1]:
+        print(self.results[-2])
+        print(self.results[-1])
+        # compare time to exceeding critical temperature
+        if self.results[-1][2] > self.results[-2][2]:
             self.results.pop(-2)
-        elif self.results[-1][1] == self.results[-2][1]:
-            if self.results[-1][0] < self.results[-2][0]:
+        # compare max temperature between elements
+        elif self.results[-1][2] == self.results[-2][2]:
+            if self.results[-1][1] < self.results[-2][1]:
                 self.results.pop(-2)
+        # choose column if time and temperature are equal
         else:
             self.results.pop(-1)
 
@@ -758,7 +772,7 @@ def open_user(user_file_pth):
     # ("whatever")
 
 
-# if __name__ == '__main__':
-    # user = open_user(argv[1])
-    # Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
+if __name__ == '__main__':
+    user = open_user(argv[1])
+    Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
 
