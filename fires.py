@@ -17,6 +17,7 @@ class Fires:
     def __init__(self, a_max, t_end):
         self.a_max = a_max  # max fire area
         self.t_end = t_end  # duration of simulation
+        self.hrr_max = 300  # MW model limitation of HRR
 
     def mc_rand(self, csv):
         ases = []   # list with partial factors A of each fuel area
@@ -128,20 +129,19 @@ class Fires:
         fuel_height = (0.5, 18.5)
         fuel_xes = (0.5, 9.5)
         fuel_yes = (0.5, 19.5)
-        hrr_max = 50
 
         config = rcsv('{}.ful'.format(name), sep=',')
         print(float(config.alpha_mode))
         alpha = triangular(*config.alpha_min, *config.alpha_max, mode=float(config.alpha_mode))
         hrrpua = triangular(*config.hrrpua_min, *config.hrrpua_max, mode=float(config.hrrpua_mode))
-        area = hrr_max / hrrpua
+        area = self.hrr_max / hrrpua
 
         print('alpha:{}, hrrpua:{}'.format(round(alpha, 4), round(hrrpua,4)))
         hrr = []
         for i in range(0, int(self.t_end/120)):
             hrr.extend([i / 60, round(alpha / 1000 * (i ** 2), 4)])
-            if hrr[-1] > hrr_max:
-                hrr[-1] = hrr_max
+            if hrr[-1] > self.hrr_max:
+                hrr[-1] = self.hrr_max
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
@@ -151,7 +151,6 @@ class Fires:
         fuel_height = (0.32, 34.1)
         fuel_xes = (0.3, 23.1)
         fuel_yes = (10.3, 101.7)
-        hrr_max = 50
 
         H = fuel_height[1] - fuel_height[0]
         A_max = (fuel_xes[1] - fuel_xes[0]) ** 2 * 3.1415 / 4
@@ -164,8 +163,8 @@ class Fires:
         hrr = []
         for i in range(0, int(self.t_end/120)):
             hrr.extend([i / 60, round(H * alpha * (i ** 3) / 1000, 4)])
-            if hrr[-1] > hrr_max:
-                hrr[-1] = hrr_max
+            if hrr[-1] > self.hrr_max:
+                hrr[-1] = self.hrr_max
 
         return hrr, area, fuel_height, fuel_xes, fuel_yes
 
@@ -173,7 +172,7 @@ class Fires:
     def alfa_t2(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
         fire_site = self.mc_rand(ffile)
-        config = ffile.iloc[fire_site]
+        config = ffile.iloc[fire_site[0]]
 
         fuel_xes = (config.XA, config.XB)
         fuel_yes = (config.YA, config.YB)
@@ -186,8 +185,8 @@ class Fires:
         elif property == 'store':
             alpha = hrrpua * random.lognormal(-9.72, 0.97)       # kW/s2
 
-        area = min(config.hrr_max / hrrpua * 1000, self.a_max)     # m2
-        area = config.hrr_max / hrrpua * 1000  # m2
+        # area = min(self.hrr_max / hrrpua * 1000, self.a_max)     # m2
+        area = self.hrr_max / hrrpua * 1000  # m2
 
         print('alpha:{}, hrrpua:{}'.format(alpha, hrrpua))
         hrr = []
@@ -196,6 +195,10 @@ class Fires:
             hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
             if hrr[-1] > area * hrrpua:
                 hrr[-1] = area * hrrpua
+                
+            # check if hrr does not exceed limit 300MW (model limitation)
+            elif hrr[-1] > self.hrr_max:
+                hrr[-1] = self.hrr_max
 
         return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha
 
@@ -232,6 +235,10 @@ class Fires:
                 hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (config.t_sprink ** 2)]])
             else:
                 hrr.extend([round(i, 4) for i in [t/60, alpha / 1000 * (t ** 2)]])
+            
+            # check if hrr does not exceed limit 300MW (model limitation)
+            if hrr[-1] > self.hrr_max:
+                hrr[-1] = self.hrr_max
 
         return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha
 
@@ -269,5 +276,9 @@ class Fires:
                     hrr.extend([round(i, 4) for i in [t / 60, q_0 * 0.00015]])
             else:
                 hrr.extend([round(i, 4) for i in [t / 60, alpha / 1000 * (t ** 2)]])
-
+            
+            # check if hrr does not exceed limit 300MW (model limitation)
+            if hrr[-1] > self.hrr_max:
+                hrr[-1] = self.hrr_max
+            
         return hrr, area, fuel_zes, fuel_xes, fuel_yes, hrrpua, alpha

@@ -54,14 +54,14 @@ class Machine:
 
     def stat(self):
         while True:
-            for i in range(5):
+            for i in range(0,70,10):
                 stat = self.check_if_busy()
                 print(self.status)
                 if not self.status:
-                    time.sleep(2)
+                    time.sleep(10)
                     stat = self.check_if_busy()
                 else:
-                    time.sleep(10-2*i)
+                    time.sleep(60-i)
                     break
 
             self.write_stat(stat)

@@ -127,7 +127,7 @@ class CreateOZN:
                 holes = js.load(file)
         except FileNotFoundError:
             self.to_write.extend([0, "null"])    # write negatives to CSV
-            print('There are no openings')
+            print('There are no wall openings')
             return no_open
 
         # attach openings to a proper place in 'no_open' list
@@ -152,7 +152,7 @@ class CreateOZN:
             with open(self.title + '.cel', 'r') as file:
                 ceil = file.readlines()
         except FileNotFoundError:
-            print('There is no horizontal natural ventilation')
+            print('There is no ceiling openings')
             tab_new.insert(0, '0\n')
             [tab_new.append('\n') for i in range(9)]
             self.to_write.extend([0, "null"])    # write negatives to CSV
@@ -220,7 +220,7 @@ class CreateOZN:
             hrr, area, fuel_z, fuel_x, fuel_y, hrrpua, alpha = f.sprink_noeff(self.title, property='store')
         else:
             print(KeyError, '{} is not a proper fire type'.format(self.f_type))
-
+               
         diam = round(2 * sqrt(area / pi), 2)
 
         # tab_new = [fire_type, distance_on_X_axis, number_of_fires]
@@ -356,7 +356,6 @@ class CreateOZN:
     #         return (*d_col, [distance, shell-zf, 'v', self.prof_type, shell])
 
     def dxf_mapping(self, fire_x, fire_y, element='b', fire_z=0):
-        print(fire_x, fire_y, fire_z, 'maja byc bezwzgledne, ttakie same')
         beams, columns, shells = self.elements_dxf()  # shells -> dict{Z_level:Plygon} | lines
         fire = sh.Point([fire_x, fire_y, fire_z])  # shapely does not support the 3D objects - z coordinate is not used
         shell_lvl = 1e6
@@ -390,7 +389,6 @@ class CreateOZN:
 
             v = vectors(lines[index])
             section = v[0] + (np.dot(v[4], v[3]) / np.dot(v[3], v[3])) * v[3]
-            print(section)
 
             # lift column's section to the biggest heat flux height (1.2m from fire base)
             if element == 'c':
@@ -545,7 +543,7 @@ class RunSim:
 
 class Main:
     def __init__(self, paths, rset, miu, fire_type, hware):
-        self.ver = '0.2.1 ({})'.format(dt.fromtimestamp(path.getmtime('main.py')).strftime('%Y-%m-%d'))
+        self.ver = '0.2.1 (mcsteel branch)'
         self.paths = paths
         self.results = []
         self.t_crit = temp_crit(miu)
@@ -584,7 +582,7 @@ class Main:
     def choose_crit(self):
         stt = self.add_data()
         interpolation = 5   # step of linear interpolation
-        print(stt)
+        print('Steel Temperature Table:{}'.format(stt))
 
         # convert steel temperature table (STT) to dictionary
         stt_d = {}
@@ -713,7 +711,7 @@ class Main:
             if not no_beam:
                 print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
                 self.worse()
-
+                
             print("Step finished OK")
 
             # exporting results every (self.save_samp) repetitions
@@ -753,9 +751,10 @@ def open_user(user_file_pth):
             user = []
 
             [user.append(line.split(' -- ')[1][:-1]) for line in file.readlines()]
-            # print(user)
+            
     except IndexError:
         print("Give me USER file as an argument.")
+        
     return user
 
     # USER file consists of:
