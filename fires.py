@@ -171,8 +171,8 @@ class Fires:
     # t-squared fire
     def alfa_t2(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = self.mc_rand(ffile)
-        config = ffile.iloc[fire_site[0]]
+        fire_site = self.mc_rand(ffile)[0]
+        config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)
         fuel_yes = (config.YA, config.YB)
@@ -205,8 +205,8 @@ class Fires:
     # curve taking sprinklers into account
     def sprink_noeff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site, ases = self.mc_rand(ffile)
-
+        fire_site = self.mc_rand(ffile)[0]
+        print(fire_site)
         config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)
@@ -244,7 +244,8 @@ class Fires:
 
     def sprink_eff(self, name, property=None):
         ffile = rcsv('{}.ful'.format(name), sep=',')
-        fire_site = self.mc_rand(ffile)
+        fire_site = self.mc_rand(ffile)[0]
+        print(fire_site)
         config = ffile.iloc[fire_site]
 
         fuel_xes = (config.XA, config.XB)

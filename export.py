@@ -104,7 +104,7 @@ class Export:
         try:
             p_evac = (len(data.time_crit[data.time_crit <= int(rset)]) - num_nocoll) / (
                         len(data.time_crit) - num_nocoll)
-            save_list.append('P(ASET < RSET) = {}\n'.format(p_evac))
+            save_list.append('P(ASET < RSET) = {}\n'.format(1 - p_evac))
         except ZeroDivisionError:
             save_list.append('unable to calculate P(ASET<RSET) and RMSE\n')
             p_evac = 0

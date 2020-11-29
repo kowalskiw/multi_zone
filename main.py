@@ -31,7 +31,7 @@ class CreateOZN:
         self.floor = []
         self.prof_type = 'profile not found -- check .XEL file'
         self.f_type = fire_type
-        self.no_beam = False
+        self.is_beam = True
 
     def write_ozn(self):
         # merge output from each config function in OZN file
@@ -47,7 +47,7 @@ class CreateOZN:
             ozn_file.writelines(['Revision\n', ' 304\n', 'Name\n', self.title + '\n'])
             ozn_file.writelines(tab_new)
             print('OZone simulation file (.ozn) has been written!')
-        return self.to_write, self.no_beam
+        return self.to_write, self.is_beam
 
     # enclosure geometry section
     def geom(self, shell=0):
@@ -240,10 +240,10 @@ class CreateOZN:
             tab_new.insert(2, '{}\n'.format(export[4]))
         else:
             tab_new.insert(2, self.geom()[2])
-        tab_new.insert(5, '{}\n'.format(diam))
-        tab_new.insert(6, '{}\n'.format(round(xr, 2)))
-        tab_new.insert(7, '{}\n'.format(round(yr, 2)))
-        tab_new.insert(3, '{}\n'.format(zr))  # height of temperature measurement
+        tab_new.insert(5, '{}\n'.format(diam, 'f'))
+        tab_new.insert(6, '{}\n'.format(round(xr, 2), 'f'))
+        tab_new.insert(7, '{}\n'.format(round(yr, 2), 'f'))
+        tab_new.insert(3, '{}\n'.format(zr, 'f'))  # height of temperature measurement
         tab_new.insert(9, '{}\n'.format(len(hrr) / 2))
 
         # write parameters to CSV
@@ -276,10 +276,10 @@ class CreateOZN:
     #                 break
     #         if above_lvl == 0:
     #             print('There is no beam available - fire ({}m) above beams ({})m'.format(zf, above_lvl))
-    #             self.no_beam = True
+    #             self.is_beam = False
     #         if above_lvl > shell > 0:
     #             print('There is no beam available - beams ({}m) covered by shell ({}m)'.format(above_lvl, shell))
-    #             self.no_beam = True
+    #             self.is_beam = False
     #         else:
     #             print('Analised beam level: {}m'.format(above_lvl))
     #
@@ -400,7 +400,12 @@ class CreateOZN:
             fire_relative = section - fire
             # check the profile and add to return
             return fire_relative, d, shell_lvl, lines[index].dxf.layer
-
+        
+        def cut_lines(lines):
+            for l in lines:
+                if l.dxf.start[2] > shell_lvl or l.dxf.end[2] < fire_z:
+                    lines.remove(l)
+        
         # check for shell (plate, ceiling) above the fire
         for lvl, poly in shells.items():
             lvl = float(lvl)
@@ -409,13 +414,15 @@ class CreateOZN:
         # set shell_lvl as -1 when there is no plate above the fire (besides compartment ceiling)
         if shell_lvl == 1e6:
             shell_lvl = -1
-
+               
         if element == 'b':
-            # here you should cut lines table to beams only
+            # cut beams accordingly to Z in (fire_z - shell_lvl) range
+            cut_lines(beams)
             mapped = map_lines(beams)
 
         elif element == 'c':
-            # here you should cut lines table to columns only
+            # cut columns accordingly to Z in (fire_z - shell_lvl) range
+            cut_lines(columns)
             mapped = map_lines(columns)
 
         self.prof_type = mapped[3]
@@ -609,21 +616,27 @@ class Main:
                 t_max = self.choose_max()
                 time_crit = self.choose_crit()
                 self.results.append([sim_id, t_max, time_crit, *export_list])
-                return True
-
+                return True     # simulation finished OK
+            
+            # refresh OZone or restart instance if no results produced
             except FileNotFoundError:
                 print("An OZone error occured -- I've tried to rerun simulation ({})".format(i + 1))
                 self.rs.new_analysis()
+                time.sleep(0.5)
                 if i % 2 != 0:
                     self.rs.close_ozn()
                     time.sleep(1)
                     self.rs.open_ozone()
-
+        
+        # print error message after 4 tries of calculating
         self.falses += 1
+        e = Export(['{}err'.format(sim_id), -1, 0, *export_list], self.paths[1], self.ver)
+        e.csv_write('err')
+
         print('Severe OZone error occured -- simulation passed and OZone restarted\n'
               'Till now {} errors have occured'.format(self.falses))
 
-        return False
+        return False    # simulation finished with error
 
     # changing relative coordinates from beam to column
     def b2c(self, sim_no):
@@ -645,14 +658,16 @@ class Main:
         # overwriting coordinates in OZN file
         with open('{}\details\{}.ozn'.format(self.paths[1], sim_no)) as file:
             ftab = file.readlines()
-        ftab[302] = '{}\n'.format(zr)
-        ftab[306] = '{}\n'.format(xr)
-        ftab[307] = '{}\n'.format(yr)
+        ftab[302] = '{}\n'.format(zr, 'f')
+        ftab[306] = '{}\n'.format(xr, 'f')
+        ftab[307] = '{}\n'.format(yr, 'f')
         prof_tab = c.profile()
         for i in range(len(prof_tab)):
             ftab[-18 + i] = prof_tab[i]
         with open('{}.ozn'.format(self.paths[-1]), 'w') as file:
             file.writelines(ftab)
+        
+        return True
 
     # choosing worse scenario
     def worse(self):
@@ -662,8 +677,7 @@ class Main:
         if self.results[-1][2] > self.results[-2][2]:
             self.results.pop(-2)
         # compare max temperature between elements
-        elif self.results[-1][2] == self.results[-2][2]:
-            if self.results[-1][1] < self.results[-2][1]:
+        elif self.results[-1][2] == self.results[-2][2] and self.results[-1][1] < self.results[-2][1]:
                 self.results.pop(-2)
         # choose column if time and temperature are equal
         else:
@@ -689,26 +703,25 @@ class Main:
             self.to_write.clear()
 
             # redirect data to CSV and create OZN file for beam
-            self.to_write, no_beam = CreateOZN(*self.paths, self.f_type).write_ozn()
+            self.to_write, is_beam = CreateOZN(*self.paths, self.f_type).write_ozn()
 
             # beam simulation
-            if not no_beam:
-                if not self.single_sim(self.to_write, sim_no):
-                    self.falses += 1
-            self.details(sim_no)    # moving Ozone files named by simulation ID
+            if is_beam:
+                is_beam = self.single_sim(self.to_write, sim_no)
+                self.details(sim_no)    # moving Ozone files named by simulation ID to details dir
 
             # column simulation
             sim_no = '{}col'.format(sim_no)
             print('\nSimulation #{} -- {}/{}'.format(sim_no, sim+1, n_iter))
-            if self.b2c(sim_no[:10]):   # change coordinates to column
+            if self.b2c(sim_no[:10]):   # change coordinates to column (False if not possible)
+                self.single_sim(self.to_write, sim_no.split('a')[0])
+            else:
                 print('There is no column available')
-                no_beam = True
-            if not self.single_sim(self.to_write, sim_no.split('a')[0]):
-                self.falses += 1
+                is_beam = False # change to don't compare results between col and beam
             self.details(sim_no)    # saving column simulation details
 
             # choosing worse scenario as single iteration output and checking its correctness
-            if not no_beam:
+            if is_beam:
                 print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
                 self.worse()
                 
