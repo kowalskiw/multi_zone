@@ -54,8 +54,10 @@ class Charting:
 
         if type == 'cdf':
             plt.savefig('dist_p.png')
+            plt.clf()
         elif type == 'pdf':
             plt.savefig('dist_d.png')
+            plt.clf()
 
     def draw(self):
         print(self.results)
@@ -125,6 +127,7 @@ class DrawOZone:
         plt.xlabel = 'time'
 
         plt.savefig(name)
+        plt.clf()
 
         return fig
 

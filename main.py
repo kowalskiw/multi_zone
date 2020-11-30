@@ -628,9 +628,9 @@ class Main:
                     time.sleep(1)
                     self.rs.open_ozone()
         
-        # print error message after 4 tries of calculating
+        # print error message after 4 tries of calculating and write iteration to err.csv
         self.falses += 1
-        e = Export(['{}err'.format(sim_id), -1, 0, *export_list], self.paths[1], self.ver)
+        e = Export([['{}err'.format(sim_id), -1, 0, *export_list]], self.paths[1], self.ver)
         e.csv_write('err')
 
         print('Severe OZone error occured -- simulation passed and OZone restarted\n'
@@ -721,10 +721,13 @@ class Main:
             self.details(sim_no)    # saving column simulation details
 
             # choosing worse scenario as single iteration output and checking its correctness
-            if is_beam:
-                print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
-                self.worse()
-                
+            try:
+                if is_beam:
+                    print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
+                    self.worse()
+            except IndexError:
+                print('There are not enough values in results list. Iteration passed.')
+
             print("Step finished OK")
 
             # exporting results every (self.save_samp) repetitions
