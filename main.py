@@ -390,7 +390,7 @@ class CreateOZN:
             v = vectors(lines[index])
             section = v[0] + (np.dot(v[4], v[3]) / np.dot(v[3], v[3])) * v[3]
 
-            # lift column's section to the biggest heat flux height (1.2m from fire base)
+            # set column's section to the biggest heat flux height (1.2m from fire base)
             if element == 'c':
                 if section[-1] + 1.2 < max([v[1][-1], v[0][-1]]):
                     section += [0, 0, 1.2]
@@ -405,6 +405,7 @@ class CreateOZN:
             for l in lines:
                 if l.dxf.start[2] > shell_lvl or l.dxf.end[2] < fire_z:
                     lines.remove(l)
+            return lines
         
         # check for shell (plate, ceiling) above the fire
         for lvl, poly in shells.items():
@@ -416,14 +417,14 @@ class CreateOZN:
             shell_lvl = -1
                
         if element == 'b':
-            # cut beams accordingly to Z in (fire_z - shell_lvl) range
-            cut_lines(beams)
-            mapped = map_lines(beams)
+            # cut beams accordingly to Z in (fire_z - shell_lvl) range and map to relative
+            mapped = map_lines(cut_lines(beams))
 
         elif element == 'c':
-            # cut columns accordingly to Z in (fire_z - shell_lvl) range
-            cut_lines(columns)
-            mapped = map_lines(columns)
+            # cut columns accordingly to Z in (fire_z - shell_lvl) range and map to relative
+            mapped = map_lines(cut_lines(columns))
+        else:
+            raise ValueError('{} is not a proper element type'.format(element))
 
         self.prof_type = mapped[3]
 
@@ -628,9 +629,9 @@ class Main:
                     time.sleep(1)
                     self.rs.open_ozone()
         
-        # print error message after 4 tries of calculating
+        # print error message after 4 tries of calculating and write iteration to err.csv
         self.falses += 1
-        e = Export(['{}err'.format(sim_id), -1, 0, *export_list], self.paths[1], self.ver)
+        e = Export([['{}err'.format(sim_id), -1, 0, *export_list]], self.paths[1], self.ver)
         e.csv_write('err')
 
         print('Severe OZone error occured -- simulation passed and OZone restarted\n'
@@ -721,10 +722,13 @@ class Main:
             self.details(sim_no)    # saving column simulation details
 
             # choosing worse scenario as single iteration output and checking its correctness
-            if is_beam:
-                print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
-                self.worse()
-                
+            try:
+                if is_beam:
+                    print('beam: {}, col: {}'.format(self.results[-2][1], self.results[-1][1]))
+                    self.worse()
+            except IndexError:
+                print('There are not enough values in results list. Iteration passed.')
+
             print("Step finished OK")
 
             # exporting results every (self.save_samp) repetitions
