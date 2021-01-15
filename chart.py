@@ -55,9 +55,11 @@ class Charting:
         if type == 'cdf':
             plt.savefig('dist_p.png')
             plt.clf()
+            plt.close('all')
         elif type == 'pdf':
             plt.savefig('dist_d.png')
             plt.clf()
+            plt.close('all')
 
     def draw(self):
         print(self.results)
@@ -128,6 +130,7 @@ class DrawOZone:
 
         plt.savefig(name)
         plt.clf()
+        plt.close('all')
 
         return fig
 
