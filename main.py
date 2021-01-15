@@ -791,4 +791,3 @@ def open_user(user_file_pth):
 if __name__ == '__main__':
     user = open_user(argv[1])
     Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
-
