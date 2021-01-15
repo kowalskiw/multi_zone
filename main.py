@@ -390,7 +390,7 @@ class CreateOZN:
             v = vectors(lines[index])
             section = v[0] + (np.dot(v[4], v[3]) / np.dot(v[3], v[3])) * v[3]
 
-            # lift column's section to the biggest heat flux height (1.2m from fire base)
+            # set column's section to the biggest heat flux height (1.2m from fire base)
             if element == 'c':
                 if section[-1] + 1.2 < max([v[1][-1], v[0][-1]]):
                     section += [0, 0, 1.2]
@@ -405,6 +405,7 @@ class CreateOZN:
             for l in lines:
                 if l.dxf.start[2] > shell_lvl or l.dxf.end[2] < fire_z:
                     lines.remove(l)
+            return lines
         
         # check for shell (plate, ceiling) above the fire
         for lvl, poly in shells.items():
@@ -416,14 +417,14 @@ class CreateOZN:
             shell_lvl = -1
                
         if element == 'b':
-            # cut beams accordingly to Z in (fire_z - shell_lvl) range
-            cut_lines(beams)
-            mapped = map_lines(beams)
+            # cut beams accordingly to Z in (fire_z - shell_lvl) range and map to relative
+            mapped = map_lines(cut_lines(beams))
 
         elif element == 'c':
-            # cut columns accordingly to Z in (fire_z - shell_lvl) range
-            cut_lines(columns)
-            mapped = map_lines(columns)
+            # cut columns accordingly to Z in (fire_z - shell_lvl) range and map to relative
+            mapped = map_lines(cut_lines(columns))
+        else:
+            raise ValueError('{} is not a proper element type'.format(element))
 
         self.prof_type = mapped[3]
 
@@ -790,4 +791,3 @@ def open_user(user_file_pth):
 if __name__ == '__main__':
     user = open_user(argv[1])
     Main(user[:4], int(user[6]), float(user[5]), user[4], float(user[8])).get_results(int(user[7]), rmse=user[9])
-
