@@ -6,4 +6,5 @@ What MultiZone does:
   - running OZone3 zone model simulation;
   - writing results of stochastic analysis as CSV file and some distributions.
 
-This script hasn't been finished yet. It still needs corrections and validation with more complex model.
+No further development of the script is planned.
+There is a new program for stochastic analyses of structures in fire condition McSteel (it does not use OZone anymore). You can find it in this [repository](https://github.com/kowalskiw/mcsteel).
