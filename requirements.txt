@@ -3,7 +3,7 @@ cycler==0.10.0
 keyboard==0.13.2
 kiwisolver==1.0.1
 matplotlib==3.0.3
-numpy==1.16.2
+numpy==1.22.0
 pandas==0.25.0
 patsy==0.5.1
 Pillow>=7.1.0
